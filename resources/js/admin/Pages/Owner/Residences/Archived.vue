@@ -120,10 +120,9 @@
                 <button
                   type="button"
                   @click="confirmReactivate(residence)"
-                  :disabled="reactivating === residence.id"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
                 >
-                  <RotateCcw class="w-3.5 h-3.5" :class="{ 'animate-spin': reactivating === residence.id }" />
+                  <RotateCcw class="w-3.5 h-3.5" />
                   Réactiver
                 </button>
               </div>
@@ -171,11 +170,10 @@
             <button
               type="button"
               @click="doReactivate"
-              :disabled="reactivating !== null"
-              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium flex items-center gap-2"
             >
-              <RotateCcw class="w-4 h-4" :class="{ 'animate-spin': reactivating !== null }" />
-              {{ reactivating !== null ? 'Réactivation…' : 'Réactiver' }}
+              <RotateCcw class="w-4 h-4" />
+              Réactiver
             </button>
           </div>
         </div>
@@ -221,7 +219,6 @@ const props = defineProps<{
 }>();
 
 const imageErrors = ref<Record<string | number, boolean>>({});
-const reactivating = ref<string | number | null>(null);
 const residenceToReactivate = ref<(typeof props.residences)[0] | null>(null);
 
 const getImage = (residence: any): string | null => {
@@ -247,21 +244,9 @@ const confirmReactivate = (residence: (typeof props.residences)[0]) => {
 const doReactivate = () => {
   if (!residenceToReactivate.value) return;
   const id = residenceToReactivate.value.id;
-  reactivating.value = id;
-  // Ne pas fermer le modal avant la réponse — l'utilisateur doit voir le résultat
+  residenceToReactivate.value = null;
   router.patch(`/owner/residences/${id}/reactivate`, {}, {
     preserveScroll: true,
-    onSuccess: () => {
-      residenceToReactivate.value = null;
-      reactivating.value = null;
-    },
-    onError: () => {
-      residenceToReactivate.value = null;
-      reactivating.value = null;
-    },
-    onFinish: () => {
-      reactivating.value = null;
-    },
   });
 };
 </script>

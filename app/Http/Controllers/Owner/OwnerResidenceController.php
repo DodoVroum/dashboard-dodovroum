@@ -162,6 +162,19 @@ class OwnerResidenceController extends Controller
                 }
             }
             
+            // Séparer actives / archivées
+            $archivedCount = 0;
+            $activeResidences = [];
+            foreach ($residences as $r) {
+                $isActive = $r['isActive'] ?? $r['isVerified'] ?? true;
+                if ($isActive === false) {
+                    $archivedCount++;
+                } else {
+                    $activeResidences[] = $r;
+                }
+            }
+            $residences = $activeResidences;
+
             // Calculer les statistiques AVANT le mapping
             $totalResidences = count($residences);
             $availableResidences = 0;
@@ -242,6 +255,7 @@ class OwnerResidenceController extends Controller
                     'to' => $paginated->lastItem(),
                 ],
                 'filters' => $filters,
+                'archivedCount' => $archivedCount,
                 'stats' => [
                     'totalResidences' => $totalResidences,
                     'availableResidences' => $availableResidences,
@@ -713,6 +727,145 @@ class OwnerResidenceController extends Controller
             
             return redirect()->route('owner.residences.index')
                 ->with('error', 'Erreur lors de la suppression de la résidence');
+        }
+    }
+
+    /**
+     * Lister les résidences archivées (isActive = false) du propriétaire
+     */
+    public function archived(Request $request): Response
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Non authentifié');
+        }
+
+        $userProprietaireId = $this->getProprietaireId($user);
+        $userAuthId = (string) $user->getAuthIdentifier();
+
+        try {
+            $allResidences = $this->residenceService->all([]);
+        } catch (\Exception $e) {
+            Log::error('Erreur API résidences archivées', ['error' => $e->getMessage()]);
+            return Inertia::render('Owner/Residences/Archived', [
+                'residences' => [],
+                'error' => 'Erreur lors de la récupération des résidences archivées.',
+            ]);
+        }
+
+        // Filtrer par propriétaire (même logique que index)
+        $archived = [];
+        foreach ($allResidences as $residence) {
+            $residenceOwnerId = null;
+            if (isset($residence['proprietaire']) && is_array($residence['proprietaire'])) {
+                $residenceOwnerId = $residence['proprietaire']['id'] ?? $residence['proprietaire']['_id'] ?? null;
+            }
+            if (!$residenceOwnerId && isset($residence['owner']) && is_array($residence['owner'])) {
+                $residenceOwnerId = $residence['owner']['id'] ?? $residence['owner']['_id'] ?? null;
+            }
+            if (!$residenceOwnerId) {
+                $residenceOwnerId = $residence['proprietaireId'] ?? $residence['proprietaire_id'] ?? $residence['ownerId'] ?? $residence['owner_id'] ?? null;
+            }
+            if (!$residenceOwnerId && isset($residence['proprietaire']) && is_string($residence['proprietaire'])) {
+                $residenceOwnerId = $residence['proprietaire'];
+            }
+
+            $ownerMatches = true;
+            if ($residenceOwnerId !== null && $residenceOwnerId !== '') {
+                $ownerStr = (string) $residenceOwnerId;
+                $ownerInt = is_numeric($residenceOwnerId) ? (int) $residenceOwnerId : null;
+                $ownerMatches = ($ownerStr === $userAuthId || $ownerStr === (string) $userProprietaireId)
+                    || ($ownerInt !== null && $userProprietaireId !== null && is_numeric($userProprietaireId) && $ownerInt === (int) $userProprietaireId)
+                    || ($ownerInt !== null && is_numeric($userAuthId) && $ownerInt === (int) $userAuthId);
+            }
+
+            if (!$ownerMatches) {
+                continue;
+            }
+
+            // Garder uniquement les inactives
+            $isActive = $residence['isActive'] ?? $residence['isVerified'] ?? true;
+            if ($isActive === false) {
+                $archived[] = $residence;
+            }
+        }
+
+        $mapped = array_map(function ($r) {
+            $mapped = \App\Services\DodoVroumApi\Mappers\ResidenceMapper::fromApi($r);
+            $mapped['canEdit'] = true;
+            return $mapped;
+        }, $archived);
+
+        $perPage = $request->get('per_page', 15);
+        $currentPage = $request->get('page', 1);
+        $collection = collect($mapped);
+        $paginated = new LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return Inertia::render('Owner/Residences/Archived', [
+            'residences' => $paginated->items(),
+            'pagination' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ],
+        ]);
+    }
+
+    /**
+     * Réactiver une résidence archivée (isActive = true)
+     */
+    public function reactivate(string $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Non authentifié');
+        }
+
+        $proprietaireId = $this->getProprietaireId($user);
+        if (!$proprietaireId) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $residence = $this->apiService->getResidence($id);
+        if (!$residence) {
+            abort(404, 'Résidence non trouvée');
+        }
+
+        $residenceProprietaireId = null;
+        if (isset($residence['proprietaire']) && is_array($residence['proprietaire'])) {
+            $residenceProprietaireId = $residence['proprietaire']['id'] ?? $residence['proprietaire']['_id'] ?? null;
+        } elseif (isset($residence['owner']) && is_array($residence['owner'])) {
+            $residenceProprietaireId = $residence['owner']['id'] ?? $residence['owner']['_id'] ?? null;
+        } else {
+            $residenceProprietaireId = $residence['proprietaireId'] ?? $residence['ownerId'] ?? null;
+        }
+
+        $matches = $residenceProprietaireId && (
+            (string) $residenceProprietaireId === (string) $proprietaireId
+            || (is_numeric($residenceProprietaireId) && is_numeric($proprietaireId) && (int) $residenceProprietaireId === (int) $proprietaireId)
+        );
+
+        if (!$matches) {
+            abort(403, 'Vous n\'êtes pas autorisé à modifier cette résidence');
+        }
+
+        try {
+            $this->apiService->updateResidence($id, ['isActive' => true]);
+            return redirect()->route('owner.residences.archived')
+                ->with('success', 'Résidence réactivée avec succès.');
+        } catch (\Exception $e) {
+            Log::error('Erreur réactivation résidence', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('owner.residences.archived')
+                ->with('error', 'Erreur lors de la réactivation de la résidence.');
         }
     }
 

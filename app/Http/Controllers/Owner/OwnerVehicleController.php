@@ -152,6 +152,19 @@ class OwnerVehicleController extends Controller
                 }
             }
             
+            // Séparer actifs / archivés
+            $archivedCount = 0;
+            $activeVehicles = [];
+            foreach ($vehicles as $v) {
+                $isActive = $v['isActive'] ?? true;
+                if ($isActive === false) {
+                    $archivedCount++;
+                } else {
+                    $activeVehicles[] = $v;
+                }
+            }
+            $vehicles = $activeVehicles;
+
             // Calculer les statistiques AVANT le mapping
             $totalVehicles = count($vehicles);
             $availableVehicles = 0;
@@ -274,6 +287,7 @@ class OwnerVehicleController extends Controller
                     'to' => $paginated->lastItem(),
                 ],
                 'filters' => $filters,
+                'archivedCount' => $archivedCount,
                 'stats' => [
                     'totalVehicles' => $totalVehicles,
                     'availableVehicles' => $availableVehicles,
@@ -295,12 +309,131 @@ class OwnerVehicleController extends Controller
     }
 
     /**
+     * Lister les véhicules archivés (isActive = false) du propriétaire
+     */
+    public function archived(Request $request): Response
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Non authentifié');
+        }
+
+        $proprietaireId = $this->getProprietaireId($user);
+        if (!$proprietaireId) {
+            return Inertia::render('Owner/Vehicles/Archived', [
+                'vehicles' => [],
+                'error' => 'Impossible de récupérer vos véhicules.',
+            ]);
+        }
+
+        $apiFilters = is_numeric($proprietaireId)
+            ? ['ownerId' => (int) $proprietaireId]
+            : ['ownerId' => $proprietaireId];
+
+        $allVehicles = $this->apiService->getVehicles($apiFilters);
+
+        // Filtrer par propriétaire (même double-vérification que index)
+        $ownerVehicles = [];
+        foreach ($allVehicles as $vehicle) {
+            $vOwnerId = null;
+            if (isset($vehicle['proprietaire']) && is_array($vehicle['proprietaire'])) {
+                $vOwnerId = $vehicle['proprietaire']['id'] ?? $vehicle['proprietaire']['_id'] ?? null;
+            }
+            if (!$vOwnerId && isset($vehicle['owner']) && is_array($vehicle['owner'])) {
+                $vOwnerId = $vehicle['owner']['id'] ?? $vehicle['owner']['_id'] ?? null;
+            }
+            if (!$vOwnerId) {
+                $vOwnerId = $vehicle['proprietaireId'] ?? $vehicle['ownerId'] ?? $vehicle['userId'] ?? null;
+            }
+            if (!$vOwnerId && isset($vehicle['proprietaire']) && is_string($vehicle['proprietaire'])) {
+                $vOwnerId = $vehicle['proprietaire'];
+            }
+
+            $matches = $vOwnerId && (
+                (string) $vOwnerId === (string) $proprietaireId
+                || (is_numeric($vOwnerId) && is_numeric($proprietaireId) && (int) $vOwnerId === (int) $proprietaireId)
+            );
+
+            if (!$matches) {
+                continue;
+            }
+
+            // Garder uniquement les inactifs
+            $isActive = $vehicle['isActive'] ?? true;
+            if ($isActive === false) {
+                $ownerVehicles[] = $vehicle;
+            }
+        }
+
+        $mapped = array_map(function ($v) {
+            $m = \App\Services\DodoVroumApi\Mappers\VehicleMapper::fromApi($v);
+            $m['canEdit'] = true;
+            $m['isActive'] = $v['isActive'] ?? false;
+            return $m;
+        }, $ownerVehicles);
+
+        $perPage = $request->get('per_page', 15);
+        $currentPage = $request->get('page', 1);
+        $collection = collect($mapped);
+        $paginated = new LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return Inertia::render('Owner/Vehicles/Archived', [
+            'vehicles' => $paginated->items(),
+            'pagination' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ],
+        ]);
+    }
+
+    /**
+     * Réactiver un véhicule archivé (isActive = true)
+     */
+    public function reactivate(string $id): RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Non authentifié');
+        }
+
+        $proprietaireId = $this->getProprietaireId($user);
+        if (!$proprietaireId) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $vehicle = $this->vehicleService->find($id);
+        if (!$vehicle) {
+            abort(404, 'Véhicule non trouvé ou accès non autorisé');
+        }
+
+        try {
+            $this->apiService->updateVehicle($id, ['isActive' => true]);
+            return redirect()->route('owner.vehicles.archived')
+                ->with('success', 'Véhicule réactivé avec succès.');
+        } catch (\Exception $e) {
+            Log::error('Erreur réactivation véhicule', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('owner.vehicles.archived')
+                ->with('error', 'Erreur lors de la réactivation du véhicule.');
+        }
+    }
+
+    /**
      * Afficher le formulaire de création
      */
     public function create(): Response
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             abort(403, 'Non authentifié');
         }

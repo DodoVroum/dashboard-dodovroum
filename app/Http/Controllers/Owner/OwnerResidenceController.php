@@ -908,7 +908,7 @@ class OwnerResidenceController extends Controller
         // via getResidence() (qui peut retourner null pour une résidence inactive avec un token owner).
         try {
             $this->apiService->updateResidence($id, ['isActive' => true]);
-            return redirect()->route('owner.residences.archived')
+            return redirect()->route('owner.residences.index')
                 ->with('success', 'Résidence réactivée avec succès.');
         } catch (\Exception $e) {
             Log::error('Erreur réactivation résidence', ['id' => $id, 'error' => $e->getMessage()]);

@@ -787,7 +787,10 @@ class OwnerResidenceController extends Controller
         // Passer proprietaireId comme filtre API pour que NestJS filtre côté serveur.
         // On inclut également isActive=false pour tenter d'obtenir les résidences inactives
         // si l'endpoint NestJS le supporte — sinon le filtre sera ignoré par l'API.
-        $apiFilters = ['proprietaireId' => $userAuthId];
+        $apiFilters = [
+            'proprietaireId' => $userAuthId,
+            'isActive'       => false,
+        ];
 
         Log::info('[archived] Filtres envoyés à GET /residences', ['apiFilters' => $apiFilters]);
 

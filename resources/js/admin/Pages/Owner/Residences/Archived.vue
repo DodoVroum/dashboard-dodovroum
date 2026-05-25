@@ -118,7 +118,7 @@
                   <Eye class="w-4 h-4" />
                 </a>
                 <form :action="`/owner/residences/${residence.id}/reactivate`" method="POST">
-                  <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''" />
+                  <input type="hidden" name="_token" :value="csrfToken()" />
                   <input type="hidden" name="_method" value="PATCH" />
                   <button
                     type="submit"
@@ -148,6 +148,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import { Building2, Eye, Archive, RotateCcw, ChevronLeft } from 'lucide-vue-next';
 import Pagination from '../../../Components/Pagination.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
@@ -180,6 +181,9 @@ const props = defineProps<{
   } | null;
   error?: string;
 }>();
+
+const page = usePage();
+const csrfToken = () => (page.props as any).csrf_token as string;
 
 const imageErrors = ref<Record<string | number, boolean>>({});
 

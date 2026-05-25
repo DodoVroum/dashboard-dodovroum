@@ -431,14 +431,27 @@ class OwnerResidenceController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        
+
+        Log::info('[store] ▶ Début création résidence', [
+            'user_id'    => $user?->getAuthIdentifier(),
+            'user_email' => $user?->email ?? 'N/A',
+            'request_keys' => array_keys($request->all()),
+        ]);
+
         if (!$user) {
+            Log::error('[store] ✗ Utilisateur non authentifié');
             abort(403, 'Non authentifié');
         }
 
+        Log::info('[store] ① Appel getProprietaireId()');
         $proprietaireId = $this->getProprietaireId($user);
+        Log::info('[store] ① getProprietaireId() retourne', [
+            'proprietaireId'      => $proprietaireId,
+            'proprietaireId_type' => gettype($proprietaireId),
+        ]);
+
         if (!$proprietaireId) {
-            Log::error('Impossible de récupérer le proprietaireId pour la création de la résidence', [
+            Log::error('[store] ✗ proprietaireId introuvable — abandon', [
                 'user_id' => $user->getAuthIdentifier(),
             ]);
             return back()->withErrors([
@@ -446,33 +459,55 @@ class OwnerResidenceController extends Controller
             ])->withInput();
         }
 
-        // Ajouter automatiquement le proprietaireId de l'utilisateur connecté
         $data = $request->all();
         $data['proprietaireId'] = $proprietaireId;
-        
-        // Tronquer la description à 500 caractères pour éviter l'erreur de base de données
+
         if (isset($data['description']) && is_string($data['description']) && mb_strlen($data['description']) > 500) {
             $data['description'] = mb_substr($data['description'], 0, 500);
         }
 
+        Log::info('[store] ② Payload avant envoi NestJS', [
+            'title'           => $data['title'] ?? null,
+            'typeResidence'   => $data['typeResidence'] ?? null,
+            'address'         => $data['address'] ?? null,
+            'city'            => $data['city'] ?? null,
+            'country'         => $data['country'] ?? null,
+            'pricePerNight'   => $data['pricePerNight'] ?? null,
+            'bedrooms'        => $data['bedrooms'] ?? null,
+            'bathrooms'       => $data['bathrooms'] ?? null,
+            'capacity'        => $data['capacity'] ?? null,
+            'images_count'    => count($data['images'] ?? []),
+            'amenities_count' => count($data['amenities'] ?? []),
+            'isActive'        => $data['isActive'] ?? null,
+            'isVerified'      => $data['isVerified'] ?? null,
+            'proprietaireId'  => $data['proprietaireId'],
+        ]);
+
         try {
-            $this->residenceService->create($data);
-            
+            Log::info('[store] ③ Appel residenceService->create()');
+            $result = $this->residenceService->create($data);
+            Log::info('[store] ✓ Résidence créée avec succès', [
+                'result_id' => $result[0]['id'] ?? $result['id'] ?? 'N/A',
+            ]);
+
             return redirect()->route('owner.residences.index')
                 ->with('success', 'Résidence créée avec succès');
         } catch (DodoVroumApiException $e) {
-            Log::error('Erreur API lors de la création de la résidence', [
-                'error' => $e->getMessage(),
+            Log::error('[store] ✗ DodoVroumApiException', [
+                'message' => $e->getMessage(),
                 'context' => $e->getContext(),
+                'code'    => $e->getCode(),
             ]);
-            
+
             return back()->withErrors([
                 'error' => $e->getMessage() ?: 'Erreur lors de la création de la résidence'
             ])->withInput();
         } catch (\Exception $e) {
-            Log::error('Erreur création résidence', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('[store] ✗ Exception générique', [
+                'class'   => get_class($e),
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile() . ':' . $e->getLine(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return back()->withErrors([

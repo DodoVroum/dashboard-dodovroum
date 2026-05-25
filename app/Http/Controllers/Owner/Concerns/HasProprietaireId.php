@@ -18,15 +18,22 @@ trait HasProprietaireId
     {
         $userId = (string) $user->getAuthIdentifier();
         $userEmail = $user->email ?? null;
-        
+
+        // Méthode 0 : Pour les propriétaires, l'user_id de session EST le proprietaireId.
+        // /api/users est réservé aux admins (retourne 403 pour les owners) — on évite tout appel API.
+        $role = $user->role ?? null;
+        if ($role === 'PROPRIETAIRE' || $role === 'owner') {
+            return $userId;
+        }
+
         // Cache le proprietaireId pour éviter de le rechercher à chaque requête
         $cacheKey = "proprietaire_id_{$userId}";
         $cachedProprietaireId = Cache::get($cacheKey);
-        
+
         if ($cachedProprietaireId !== null) {
             return $cachedProprietaireId;
         }
-        
+
         $apiService = $this->apiService ?? app(DodoVroumApiService::class);
         
         // Méthode 1 : Essayer de récupérer les données utilisateur complètes par ID

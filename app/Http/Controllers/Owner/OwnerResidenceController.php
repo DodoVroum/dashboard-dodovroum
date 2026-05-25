@@ -784,8 +784,15 @@ class OwnerResidenceController extends Controller
             'userProprietaireId' => $userProprietaireId,
         ]);
 
+        // Passer proprietaireId comme filtre API pour que NestJS filtre côté serveur.
+        // On inclut également isActive=false pour tenter d'obtenir les résidences inactives
+        // si l'endpoint NestJS le supporte — sinon le filtre sera ignoré par l'API.
+        $apiFilters = ['proprietaireId' => $userAuthId];
+
+        Log::info('[archived] Filtres envoyés à GET /residences', ['apiFilters' => $apiFilters]);
+
         try {
-            $allResidences = $this->residenceService->all([]);
+            $allResidences = $this->residenceService->all($apiFilters);
         } catch (\Exception $e) {
             Log::error('Erreur API résidences archivées', ['error' => $e->getMessage()]);
             return Inertia::render('Owner/Residences/Archived', [
@@ -796,7 +803,7 @@ class OwnerResidenceController extends Controller
 
         Log::info('[archived] ① API retourne ' . count($allResidences) . ' résidence(s) au total');
 
-        // Filtrer par propriétaire (même logique que index)
+        // Filtrer par propriétaire
         $archived = [];
         foreach ($allResidences as $residence) {
             $residenceId = $residence['id'] ?? $residence['_id'] ?? '?';
@@ -825,29 +832,29 @@ class OwnerResidenceController extends Controller
             }
 
             // Valeur brute de isActive telle que reçue de l'API
-            $isActiveRaw      = $residence['isActive']   ?? 'ABSENT';
-            $isVerifiedRaw    = $residence['isVerified']  ?? 'ABSENT';
+            $isActiveRaw      = array_key_exists('isActive', $residence) ? $residence['isActive'] : 'ABSENT';
+            $isVerifiedRaw    = array_key_exists('isVerified', $residence) ? $residence['isVerified'] : 'ABSENT';
             $isActiveResolved = $residence['isActive'] ?? $residence['isVerified'] ?? true;
 
             Log::info('[archived] ② Résidence', [
-                'id'               => $residenceId,
-                'title'            => $residence['title'] ?? $residence['name'] ?? '?',
-                'residenceOwnerId' => $residenceOwnerId,
-                'ownerMatches'     => $ownerMatches,
-                'isActive_raw'     => $isActiveRaw,
-                'isVerified_raw'   => $isVerifiedRaw,
-                'isActive_resolved'=> $isActiveResolved,
-                'isActive_type'    => gettype($isActiveResolved),
-                'passes_filter'    => $ownerMatches && $isActiveResolved === false,
+                'id'                => $residenceId,
+                'title'             => $residence['title'] ?? $residence['name'] ?? '?',
+                'residenceOwnerId'  => $residenceOwnerId,
+                'ownerMatches'      => $ownerMatches,
+                'isActive_raw'      => $isActiveRaw,
+                'isVerified_raw'    => $isVerifiedRaw,
+                'isActive_resolved' => $isActiveResolved,
+                'isActive_type'     => gettype($isActiveResolved),
+                'passes_filter'     => $ownerMatches && !$isActiveResolved,
             ]);
 
             if (!$ownerMatches) {
                 continue;
             }
 
-            // Garder uniquement les inactives
+            // Garder uniquement les inactives — comparaison souple (false, 0, null)
             $isActive = $residence['isActive'] ?? $residence['isVerified'] ?? true;
-            if ($isActive === false) {
+            if (!$isActive) {
                 $archived[] = $residence;
             }
         }

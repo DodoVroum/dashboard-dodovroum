@@ -749,12 +749,12 @@ class OwnerVehicleController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        $vehicle = $this->vehicleService->find($id);
+        $vehicle = $this->apiService->getVehicle($id);
         if (!$vehicle) {
-            abort(404, 'Véhicule non trouvé ou accès non autorisé');
+            abort(404, 'Véhicule non trouvé');
         }
 
-        $currentActive = $vehicle['isActive'] ?? true;
+        $currentActive = $vehicle['isActive'] ?? $vehicle['is_active'] ?? true;
         $newActive = !$currentActive;
 
         try {

@@ -317,6 +317,8 @@ class OwnerVehicleController extends Controller
         }
 
         $proprietaireId = $this->getProprietaireId($user);
+        $userAuthId = (string) $user->getAuthIdentifier();
+
         if (!$proprietaireId) {
             return Inertia::render('Owner/Vehicles/Archived', [
                 'vehicles' => [],
@@ -324,9 +326,10 @@ class OwnerVehicleController extends Controller
             ]);
         }
 
-        $apiFilters = is_numeric($proprietaireId)
-            ? ['ownerId' => (int) $proprietaireId]
-            : ['ownerId' => $proprietaireId];
+        $apiFilters = [
+            'proprietaireId' => $userAuthId,
+            'isActive'       => 'false',
+        ];
 
         $allVehicles = $this->apiService->getVehicles($apiFilters);
 

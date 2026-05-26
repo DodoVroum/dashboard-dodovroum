@@ -100,6 +100,7 @@ Route::middleware(['auth', 'owner'])
         Route::resource('residences', \App\Http\Controllers\Owner\OwnerResidenceController::class)->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::get('/vehicles/archived', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'archived'])->name('vehicles.archived');
         Route::patch('/vehicles/{id}/toggle-active', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'toggleActive'])->name('vehicles.toggle-active');
+        Route::patch('/vehicles/{id}/reactivate', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'reactivate'])->name('vehicles.reactivate');
         Route::resource('vehicles', \App\Http\Controllers\Owner\OwnerVehicleController::class)->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
         // Routes pour l'approbation/rejet des réservations (avant la route resource pour éviter les conflits)
         Route::patch('/bookings/{id}/approve', [\App\Http\Controllers\Owner\OwnerBookingController::class, 'approve'])->name('bookings.approve');
@@ -119,7 +120,6 @@ Route::middleware(['auth', 'owner'])
         Route::get('/vehicles/{id}/blocked-dates', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'getBlockedDates'])->name('vehicles.blocked-dates');
         Route::post('/vehicles/{id}/blocked-dates', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'blockDate'])->name('vehicles.block-date');
         Route::delete('/vehicles/{id}/blocked-dates', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'unblockDate'])->name('vehicles.unblock-date');
-        Route::patch('/vehicles/{id}/reactivate', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'reactivate'])->name('vehicles.reactivate');
         
         Route::get('/combo-offers/{id}/blocked-dates', [\App\Http\Controllers\Owner\OwnerComboOfferController::class, 'getBlockedDates'])->name('combo-offers.blocked-dates');
         Route::post('/combo-offers/{id}/blocked-dates', [\App\Http\Controllers\Owner\OwnerComboOfferController::class, 'blockDate'])->name('combo-offers.block-date');

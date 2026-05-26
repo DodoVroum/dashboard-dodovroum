@@ -347,10 +347,9 @@ class OwnerComboOfferController extends Controller
                 abort(403, 'Accès non autorisé');
             }
             
-            // Utiliser le token du propriétaire pour récupérer toutes ses résidences et véhicules (comme "Mes résidences")
-            $residences = $this->residenceService->all([]);
-            $vehicles = $this->vehicleService->all([]);
-            
+            $residences = $this->residenceService->all(['proprietaireId' => $proprietaireId]);
+            $vehicles = $this->vehicleService->all(['proprietaireId' => $proprietaireId]);
+
             return Inertia::render('Owner/ComboOffers/Create', [
                 'residences' => is_array($residences) ? array_slice($residences, 0, 100) : [],
                 'vehicles' => is_array($vehicles) ? array_slice($vehicles, 0, 100) : [],
@@ -904,10 +903,9 @@ class OwnerComboOfferController extends Controller
                 'isVerified' => $offer['isVerified'] ?? $offer['is_verified'] ?? false,
             ];
             
-            // Utiliser le token du propriétaire pour récupérer toutes ses résidences et véhicules
-            $residences = $this->residenceService->all([]);
-            $vehicles = $this->vehicleService->all([]);
-            
+            $residences = $this->residenceService->all(['proprietaireId' => $proprietaireId]);
+            $vehicles = $this->vehicleService->all(['proprietaireId' => $proprietaireId]);
+
             return Inertia::render('Owner/ComboOffers/Edit', [
                 'comboOffer' => $mappedOffer,
                 'residences' => is_array($residences) ? array_slice($residences, 0, 100) : [],
@@ -1225,9 +1223,8 @@ class OwnerComboOfferController extends Controller
                 ]);
             }
 
-            // Utiliser le token du propriétaire : l'API ne renvoie que ses résidences et véhicules
-            $ownerResidences = $this->residenceService->all([]);
-            $ownerVehicles = $this->vehicleService->all([]);
+            $ownerResidences = $this->residenceService->all(['proprietaireId' => $proprietaireId]);
+            $ownerVehicles = $this->vehicleService->all(['proprietaireId' => $proprietaireId]);
 
             if (!is_array($ownerResidences)) {
                 $ownerResidences = [];

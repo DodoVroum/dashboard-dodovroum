@@ -56,6 +56,7 @@ class VehicleMapper
             'images' => self::normalizeImages($vehicle),
             'features' => $vehicle['commodites'] ?? $vehicle['features'] ?? [],
             'commodites' => $vehicle['commodites'] ?? $vehicle['features'] ?? [],
+            'isActive' => $vehicle['isActive'] ?? $vehicle['is_active'] ?? true,
             'isAvailable' => $vehicle['isAvailable'] ?? $vehicle['available'] ?? $vehicle['disponible'] ?? true,
             'available' => $vehicle['isAvailable'] ?? $vehicle['available'] ?? $vehicle['disponible'] ?? true,
             'disponible' => $vehicle['isAvailable'] ?? $vehicle['available'] ?? $vehicle['disponible'] ?? true,

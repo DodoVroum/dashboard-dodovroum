@@ -57,7 +57,7 @@ class ResidenceMapper
             'commodites' => $residence['commodites'] ?? $residence['amenities'] ?? [],
             'latitude' => $residence['localisation']['latitude'] ?? $residence['latitude'] ?? null,
             'longitude' => $residence['localisation']['longitude'] ?? $residence['longitude'] ?? null,
-            'isActive' => $residence['isVerified'] ?? $residence['isActive'] ?? true,
+            'isActive' => $residence['isActive'] ?? $residence['isVerified'] ?? true,
             'isVerified' => $residence['isVerified'] ?? false,
             'isAvailable' => $isAvailable ?? ($residence['isVerified'] ?? true),
             'available' => $isAvailable ?? ($residence['isVerified'] ?? true),

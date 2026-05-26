@@ -726,6 +726,47 @@ class OwnerVehicleController extends Controller
     }
 
     /**
+     * Activer ou désactiver un véhicule (bascule isActive)
+     */
+    public function toggleActive(string $id): RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Non authentifié');
+        }
+
+        $proprietaireId = $this->getProprietaireId($user);
+        if (!$proprietaireId) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $vehicle = $this->vehicleService->find($id);
+        if (!$vehicle) {
+            abort(404, 'Véhicule non trouvé ou accès non autorisé');
+        }
+
+        $currentActive = $vehicle['isActive'] ?? true;
+        $newActive = !$currentActive;
+
+        try {
+            $this->apiService->updateVehicle($id, ['isActive' => $newActive]);
+            $message = $newActive ? 'Véhicule activé.' : 'Véhicule désactivé.';
+            return redirect()->route('owner.vehicles.show', $id)->with('success', $message);
+        } catch (DodoVroumApiException $e) {
+            Log::error('Erreur API lors du toggle active véhicule', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->route('owner.vehicles.show', $id)
+                ->with('error', $e->getMessage() ?: 'Erreur lors de la mise à jour.');
+        } catch (\Exception $e) {
+            Log::error('Erreur toggle active véhicule', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('owner.vehicles.show', $id)
+                ->with('error', 'Erreur lors de la mise à jour.');
+        }
+    }
+
+    /**
      * Supprimer un véhicule
      */
     public function destroy(string $id): RedirectResponse

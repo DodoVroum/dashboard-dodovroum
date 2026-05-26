@@ -99,6 +99,7 @@ Route::middleware(['auth', 'owner'])
         Route::patch('/residences/{id}/reactivate', [\App\Http\Controllers\Owner\OwnerResidenceController::class, 'reactivate'])->name('residences.reactivate');
         Route::resource('residences', \App\Http\Controllers\Owner\OwnerResidenceController::class)->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::get('/vehicles/archived', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'archived'])->name('vehicles.archived');
+        Route::patch('/vehicles/{id}/toggle-active', [\App\Http\Controllers\Owner\OwnerVehicleController::class, 'toggleActive'])->name('vehicles.toggle-active');
         Route::resource('vehicles', \App\Http\Controllers\Owner\OwnerVehicleController::class)->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
         // Routes pour l'approbation/rejet des réservations (avant la route resource pour éviter les conflits)
         Route::patch('/bookings/{id}/approve', [\App\Http\Controllers\Owner\OwnerBookingController::class, 'approve'])->name('bookings.approve');

@@ -162,18 +162,28 @@ class OwnerResidenceController extends Controller
                 }
             }
             
-            // Séparer actives / archivées
-            $archivedCount = 0;
+            // Séparer actives / archivées (l'API ne retourne que les actives par défaut)
             $activeResidences = [];
             foreach ($residences as $r) {
                 $isActive = $r['isActive'] ?? $r['isVerified'] ?? true;
-                if ($isActive === false) {
-                    $archivedCount++;
-                } else {
+                if ($isActive !== false) {
                     $activeResidences[] = $r;
                 }
             }
             $residences = $activeResidences;
+
+            // Compter les archivées via un appel dédié isActive=false (même logique que archived())
+            $archivedCount = 0;
+            try {
+                $ownerIdForArchived = $userProprietaireId ?? $userAuthId;
+                $archivedList = $this->residenceService->all([
+                    'proprietaireId' => $ownerIdForArchived,
+                    'isActive'       => 'false',
+                ]);
+                $archivedCount = count($archivedList);
+            } catch (\Exception $e) {
+                Log::warning('Impossible de compter les résidences archivées', ['error' => $e->getMessage()]);
+            }
 
             // Calculer les statistiques AVANT le mapping
             $totalResidences = count($residences);

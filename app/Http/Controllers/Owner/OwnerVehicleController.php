@@ -141,18 +141,27 @@ class OwnerVehicleController extends Controller
                 }
             }
             
-            // Séparer actifs / archivés
-            $archivedCount = 0;
+            // Séparer actifs / archivés (l'API ne retourne que les actifs par défaut)
             $activeVehicles = [];
             foreach ($vehicles as $v) {
                 $isActive = $v['isActive'] ?? true;
-                if ($isActive === false) {
-                    $archivedCount++;
-                } else {
+                if ($isActive !== false) {
                     $activeVehicles[] = $v;
                 }
             }
             $vehicles = $activeVehicles;
+
+            // Compter les archivés via un appel dédié isActive=false (même logique que archived())
+            $archivedCount = 0;
+            try {
+                $archivedList = $this->apiService->getVehicles([
+                    'proprietaireId' => $apiFilters['proprietaireId'] ?? $proprietaireId,
+                    'isActive'       => 'false',
+                ]);
+                $archivedCount = count($archivedList);
+            } catch (\Exception $e) {
+                Log::warning('Impossible de compter les véhicules archivés', ['error' => $e->getMessage()]);
+            }
 
             // Calculer les statistiques AVANT le mapping
             $totalVehicles = count($vehicles);

@@ -1192,7 +1192,12 @@ class OwnerComboOfferController extends Controller
                 abort(403, 'Vous n\'êtes pas autorisé à supprimer cette offre');
             }
 
-            $this->apiService->deleteComboOffer($id);
+            $deleted = $this->apiService->deleteComboOffer($id);
+
+            if (!$deleted) {
+                Log::error('Échec suppression offre combinée (API a retourné false)', ['id' => $id]);
+                return back()->with('error', 'Impossible de supprimer cette offre. Elle est peut-être liée à des réservations actives.');
+            }
 
             return redirect()->route('owner.combo-offers.index')
                 ->with('success', 'Offre combinée supprimée avec succès');
@@ -1202,7 +1207,12 @@ class OwnerComboOfferController extends Controller
                 'id' => $id,
             ]);
 
-            return back()->with('error', 'Erreur lors de la suppression de l\'offre combinée: ' . $e->getMessage());
+            $message = $e->getMessage();
+            if (str_contains(strtolower($message), 'internal server error') || str_contains($message, '500')) {
+                $message = 'La suppression a échoué côté serveur. L\'offre est peut-être liée à des réservations ou des biens actifs.';
+            }
+
+            return back()->with('error', $message ?: 'Erreur lors de la suppression de l\'offre combinée.');
         }
     }
 

@@ -42,7 +42,8 @@
         </a>
       </div>
 
-      <table v-else class="w-full">
+      <div v-else class="overflow-x-auto">
+      <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Véhicule</th>
@@ -132,6 +133,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <!-- Pagination -->
       <Pagination

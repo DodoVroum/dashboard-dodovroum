@@ -100,7 +100,7 @@
           Modifier les photos →
         </Link>
       </div>
-      <div v-if="allImages.length > 0" class="grid grid-cols-4 gap-4">
+      <div v-if="allImages.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div
           v-for="(image, index) in allImages.slice(0, 5)"
           :key="index"

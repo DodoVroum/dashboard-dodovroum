@@ -412,11 +412,6 @@ class OwnerVehicleController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        $vehicle = $this->vehicleService->find($id);
-        if (!$vehicle) {
-            abort(404, 'Véhicule non trouvé ou accès non autorisé');
-        }
-
         try {
             $this->apiService->updateVehicle($id, ['isActive' => true]);
             return redirect()->route('owner.vehicles.archived')

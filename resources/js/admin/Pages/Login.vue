@@ -1,89 +1,141 @@
 <template>
   <div class="auth-root">
-    <!-- LEFT PANEL — branding -->
-    <div class="brand-panel">
-      <!-- Animated gradient blobs -->
-      <div class="blob blob-1" />
-      <div class="blob blob-2" />
-      <div class="blob blob-3" />
 
-      <!-- Grid overlay -->
-      <div class="grid-overlay" />
+    <!-- ─── Background : blobs existants + grille ─── -->
+    <div class="bg-base" />
+    <div class="bg-blob  bg-blob--1" />
+    <div class="bg-blob  bg-blob--2" />
+    <div class="bg-blob  bg-blob--3" />
+    <div class="bg-grid" />
 
-      <div class="brand-content">
-        <!-- Logo card -->
-        <div class="logo-card" :class="{ 'logo-card--visible': mounted }">
-          <img :src="logoUrl" alt="DodoVroum" class="logo-img" />
+    <!-- ─────────────────────────────────────────
+         LEFT PANEL — branding
+    ───────────────────────────────────────────── -->
+    <aside class="brand-panel">
+      <div class="brand-inner">
+
+        <!-- Logo -->
+        <div class="logo-wrap" :class="{ 'anim-in': mounted }">
+          <div class="logo-halo" />
+          <div class="logo-card">
+            <img :src="logoUrl" alt="DodoVroum" class="logo-img" />
+          </div>
         </div>
 
-        <!-- Tagline -->
-        <div class="brand-text" :class="{ 'brand-text--visible': mounted }">
-          <h2 class="brand-headline">La plateforme de gestion<br/>de locations tout-en-un</h2>
-          <p class="brand-sub">Résidences · Véhicules · Réservations</p>
+        <!-- Accroche -->
+        <div class="brand-copy" :class="{ 'anim-in': mounted }">
+          <p class="brand-eyebrow">Plateforme de gestion locative</p>
+          <h1 class="brand-title">
+            Gérez vos locations,<br/>
+            véhicules et réservations<br/>
+            <span class="brand-title__hl">en temps réel.</span>
+          </h1>
+          <p class="brand-desc">
+            Tout ce dont vous avez besoin pour piloter votre patrimoine locatif depuis un seul endroit.
+          </p>
         </div>
 
-        <!-- Feature pills -->
-        <div class="feature-pills" :class="{ 'feature-pills--visible': mounted }">
-          <span class="pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            Résidences
-          </span>
-          <span class="pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 6h-2l-3 7H3l1 4h14l1-4h-3l-3-7z"/></svg>
-            Véhicules
-          </span>
-          <span class="pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            Réservations
-          </span>
+        <!-- Features -->
+        <ul class="feat-list" :class="{ 'anim-in': mounted }">
+          <li class="feat-item">
+            <span class="feat-icon feat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            </span>
+            <span class="feat-text">
+              <strong>Résidences</strong>
+              <span>Suivi des biens et des occupants</span>
+            </span>
+            <span class="feat-check">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 7l3 3L11.5 4"/></svg>
+            </span>
+          </li>
+          <li class="feat-item">
+            <span class="feat-icon feat-icon--orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 6h-2l-3 7H3l1 4h14l1-4h-3l-3-7z"/></svg>
+            </span>
+            <span class="feat-text">
+              <strong>Véhicules</strong>
+              <span>Flotte et disponibilités en direct</span>
+            </span>
+            <span class="feat-check">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 7l3 3L11.5 4"/></svg>
+            </span>
+          </li>
+          <li class="feat-item">
+            <span class="feat-icon feat-icon--blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            <span class="feat-text">
+              <strong>Réservations</strong>
+              <span>Calendrier centralisé et alertes</span>
+            </span>
+            <span class="feat-check">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 7l3 3L11.5 4"/></svg>
+            </span>
+          </li>
+        </ul>
+
+        <!-- Stats -->
+        <div class="stats" :class="{ 'anim-in': mounted }">
+          <div class="stat">
+            <span class="stat-n">500<em>+</em></span>
+            <span class="stat-l">Propriétaires</span>
+          </div>
+          <div class="stat-sep" />
+          <div class="stat">
+            <span class="stat-n">2 400<em>+</em></span>
+            <span class="stat-l">Biens gérés</span>
+          </div>
+          <div class="stat-sep" />
+          <div class="stat">
+            <span class="stat-n">99.9<em>%</em></span>
+            <span class="stat-l">Disponibilité</span>
+          </div>
         </div>
 
-        <!-- Floating decorative icons -->
-        <div class="float-icon float-house">
-          <svg viewBox="0 0 48 48" fill="none"><path d="M6 20L24 6l18 14v22H6V20z" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><rect x="18" y="30" width="12" height="12" rx="1" fill="rgba(249,115,22,0.3)"/></svg>
-        </div>
-        <div class="float-icon float-car">
-          <svg viewBox="0 0 48 48" fill="none"><path d="M8 30l4-12h24l4 12v8H8v-8z" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><circle cx="14" cy="38" r="4" fill="rgba(249,115,22,0.3)" stroke="rgba(249,115,22,0.4)" stroke-width="1.5"/><circle cx="34" cy="38" r="4" fill="rgba(249,115,22,0.3)" stroke="rgba(249,115,22,0.4)" stroke-width="1.5"/></svg>
-        </div>
-
-        <!-- Footer copyright -->
-        <p class="brand-footer">© {{ new Date().getFullYear() }} DodoVroum. Tous droits réservés.</p>
+        <p class="brand-footer">© {{ new Date().getFullYear() }} DodoVroum — Tous droits réservés</p>
       </div>
-    </div>
+    </aside>
 
-    <!-- RIGHT PANEL — form -->
-    <div class="form-panel">
-      <div class="form-wrapper" :class="{ 'form-wrapper--visible': mounted }">
+    <!-- ─────────────────────────────────────────
+         RIGHT PANEL — formulaire
+    ───────────────────────────────────────────── -->
+    <main class="form-panel">
+      <div class="glass-card" :class="{ 'anim-in': mounted }">
 
-        <!-- Mobile logo -->
+        <!-- Logo mobile uniquement -->
         <div class="mobile-logo">
-          <img :src="logoUrl" alt="DodoVroum" class="mobile-logo-img" />
+          <img :src="logoUrl" alt="DodoVroum" class="mobile-logo__img" />
         </div>
 
-        <!-- Header -->
-        <div class="form-header">
-          <h1 class="form-title">Bon retour !</h1>
-          <p class="form-subtitle">Connectez-vous à votre espace de gestion</p>
-        </div>
+        <!-- En-tête -->
+        <header class="card-head">
+          <div class="card-badge">
+            <span class="card-badge__dot" />
+            Connexion sécurisée
+          </div>
+          <h2 class="card-title">Bon retour !</h2>
+          <p class="card-sub">Accédez à votre espace de gestion</p>
+        </header>
 
-        <!-- Global error banner -->
+        <!-- Bannière d'erreur globale -->
         <transition name="shake">
-          <div v-if="globalError" class="error-banner">
-            <div class="error-banner__icon">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
-            </div>
+          <div v-if="globalError" class="err-banner" role="alert">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
             <span>{{ globalError }}</span>
           </div>
         </transition>
 
-        <form @submit.prevent="submit" class="form-body" novalidate>
+        <!-- Formulaire -->
+        <form @submit.prevent="submit" class="form" novalidate>
+
           <!-- Email -->
-          <div class="field" :class="{ 'field--error': form.errors.email, 'field--focused': focusedField === 'email', 'field--filled': form.email }">
-            <label for="email" class="field__label">Adresse email</label>
-            <div class="field__input-wrap">
-              <div class="field__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              </div>
+          <div class="field" :class="{ 'field--focus': focused === 'email', 'field--err': form.errors.email }">
+            <label for="email" class="field__lbl">Adresse email</label>
+            <div class="field__row">
+              <span class="field__ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </span>
               <input
                 id="email"
                 v-model="form.email"
@@ -92,101 +144,87 @@
                 autocomplete="email"
                 required
                 placeholder="votre@email.com"
-                class="field__input"
-                @focus="focusedField = 'email'"
-                @blur="focusedField = null"
+                class="field__inp"
+                @focus="focused = 'email'"
+                @blur="focused = null"
               />
             </div>
-            <transition name="slide-down">
-              <p v-if="form.errors.email" class="field__error">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <transition name="msg">
+              <p v-if="form.errors.email" class="field__msg">
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 118 1a7 7 0 010 14zm0-3a.75.75 0 100-1.5.75.75 0 000 1.5zm.75-5.25a.75.75 0 10-1.5 0v2.5a.75.75 0 001.5 0v-2.5z"/></svg>
                 {{ form.errors.email }}
               </p>
             </transition>
           </div>
 
-          <!-- Password -->
-          <div class="field" :class="{ 'field--error': form.errors.password, 'field--focused': focusedField === 'password', 'field--filled': form.password }">
-            <label for="password" class="field__label">Mot de passe</label>
-            <div class="field__input-wrap">
-              <div class="field__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-              </div>
+          <!-- Mot de passe -->
+          <div class="field" :class="{ 'field--focus': focused === 'password', 'field--err': form.errors.password }">
+            <label for="password" class="field__lbl">Mot de passe</label>
+            <div class="field__row">
+              <span class="field__ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              </span>
               <input
                 id="password"
                 v-model="form.password"
                 name="password"
-                :type="showPassword ? 'text' : 'password'"
+                :type="showPwd ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
                 placeholder="••••••••"
-                class="field__input field__input--password"
-                @focus="focusedField = 'password'"
-                @blur="focusedField = null"
+                class="field__inp field__inp--pwd"
+                @focus="focused = 'password'"
+                @blur="focused = null"
               />
               <button
                 type="button"
-                class="field__toggle"
-                :title="showPassword ? 'Masquer' : 'Afficher'"
-                @click="showPassword = !showPassword"
+                class="field__eye"
+                :title="showPwd ? 'Masquer' : 'Afficher'"
+                @click="showPwd = !showPwd"
               >
-                <!-- Eye open -->
-                <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                <!-- Eye off -->
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                <svg v-if="!showPwd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
               </button>
             </div>
-            <transition name="slide-down">
-              <p v-if="form.errors.password" class="field__error">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <transition name="msg">
+              <p v-if="form.errors.password" class="field__msg">
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 118 1a7 7 0 010 14zm0-3a.75.75 0 100-1.5.75.75 0 000 1.5zm.75-5.25a.75.75 0 10-1.5 0v2.5a.75.75 0 001.5 0v-2.5z"/></svg>
                 {{ form.errors.password }}
               </p>
             </transition>
           </div>
 
-          <!-- Remember me -->
-          <div class="remember-row">
-            <label class="remember-label">
-              <div class="remember-checkbox-wrap">
-                <input
-                  id="remember"
-                  v-model="form.remember"
-                  name="remember"
-                  type="checkbox"
-                  class="remember-input"
-                />
-                <div class="remember-custom" :class="{ 'remember-custom--checked': form.remember }">
-                  <svg v-if="form.remember" viewBox="0 0 12 12" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 6l3 3 5-5"/></svg>
-                </div>
-              </div>
-              <span>Se souvenir de moi</span>
-            </label>
-          </div>
+          <!-- Se souvenir -->
+          <label class="remember">
+            <input id="remember" v-model="form.remember" name="remember" type="checkbox" class="remember__native" />
+            <span class="remember__box" :class="{ 'remember__box--on': form.remember }">
+              <svg v-if="form.remember" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2 6l3 3 5-5"/></svg>
+            </span>
+            <span class="remember__lbl">Se souvenir de moi</span>
+          </label>
 
-          <!-- Submit button -->
+          <!-- Bouton -->
           <button
             type="submit"
             :disabled="form.processing"
-            class="submit-btn"
-            :class="{ 'submit-btn--loading': form.processing }"
+            class="cta-btn"
           >
-            <span v-if="!form.processing" class="submit-btn__content">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+            <span v-if="!form.processing" class="cta-btn__inner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
               Se connecter
             </span>
-            <span v-else class="submit-btn__spinner">
-              <svg viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
-              Connexion en cours…
+            <span v-else class="cta-btn__spin">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="45"/></svg>
+              Connexion…
             </span>
           </button>
+
         </form>
 
-        <!-- Form footer -->
-        <p class="form-footer">
-          © {{ new Date().getFullYear() }} DodoVroum · Plateforme de gestion
-        </p>
+        <p class="card-footer">© {{ new Date().getFullYear() }} DodoVroum · Plateforme de gestion locative</p>
       </div>
-    </div>
+    </main>
+
   </div>
 </template>
 
@@ -198,498 +236,631 @@ import logoUrl from '../assets/logo.png';
 
 defineOptions({ layout: AuthLayout });
 
-const form = useForm({ email: '', password: '', remember: false });
-const showPassword = ref(false);
-const focusedField = ref<string | null>(null);
+const form    = useForm({ email: '', password: '', remember: false });
+const showPwd = ref(false);
+const focused = ref<string | null>(null);
 const mounted = ref(false);
 
-const globalError = computed(() => {
-  if (form.errors.email && form.errors.password) return null;
-  if (!form.errors.email && !form.errors.password) return null;
-  return null;
-});
+/* Affiche la bannière uniquement pour erreur d'authentification globale */
+const globalError = computed(() =>
+  form.errors.email && !form.email.trim() ? form.errors.email : null
+);
 
-onMounted(() => {
-  setTimeout(() => { mounted.value = true; }, 50);
-});
+onMounted(() => setTimeout(() => { mounted.value = true; }, 60));
 
-const submit = () => {
-  form.post('/login', { onFinish: () => form.reset('password') });
-};
+const submit = () => form.post('/login', { onFinish: () => form.reset('password') });
 </script>
 
 <style scoped>
-/* ─── Root layout ─── */
+/* ══════════════════════════════════════════
+   PALETTE — couleurs existantes du projet
+   ──────────────────────────────────────────
+   Bleu foncé  : #0a1628  #0d2855  #1a4a9e
+   Bleu brand  : #1d6fd4
+   Orange brand: #f97316  #ea580c
+   Blanc/trans : rgba(255,255,255,…)
+   Erreur      : #dc2626  #f87171
+   ══════════════════════════════════════════ */
+
+/* ── Root ── */
 .auth-root {
+  position: relative;
   display: flex;
   min-height: 100dvh;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
 }
 
-/* ─── LEFT BRAND PANEL ─── */
+/* ── Background ── */
+.bg-base {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* gradient existant du left-panel, étendu à toute la page */
+  background: linear-gradient(135deg, #0a1628 0%, #0d2855 45%, #1a4a9e 100%);
+  background-size: 250% 250%;
+  animation: bgDrift 20s ease infinite;
+}
+@keyframes bgDrift {
+  0%,100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Blobs — couleurs bleue et orange existantes */
+.bg-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(88px);
+  pointer-events: none;
+  z-index: 1;
+}
+.bg-blob--1 {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(29,111,212,.5) 0%, transparent 70%);
+  top: -100px; left: -80px;
+  animation: blob1 15s ease-in-out infinite;
+}
+.bg-blob--2 {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(249,115,22,.28) 0%, transparent 70%);
+  bottom: 10%; right: -40px;
+  animation: blob2 11s ease-in-out infinite;
+}
+.bg-blob--3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(29,111,212,.22) 0%, transparent 70%);
+  bottom: -60px; left: 28%;
+  animation: blob3 18s ease-in-out infinite;
+}
+@keyframes blob1 { 0%,100%{transform:translate(0,0)}40%{transform:translate(28px,-22px)}70%{transform:translate(-12px,18px)} }
+@keyframes blob2 { 0%,100%{transform:translate(0,0)}50%{transform:translate(-20px,24px)} }
+@keyframes blob3 { 0%,100%{transform:translate(0,0)}45%{transform:translate(18px,-14px)} }
+
+/* Grille subtile — existante */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 52px 52px;
+}
+
+/* ── Entrée animée ── */
+.logo-wrap,
+.brand-copy,
+.feat-list,
+.stats       { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .65s cubic-bezier(.34,1.4,.64,1); }
+.brand-copy  { transition-delay: .1s; }
+.feat-list   { transition-delay: .2s; }
+.stats       { transition-delay: .3s; }
+.anim-in     { opacity: 1 !important; transform: translateY(0) !important; }
+
+/* ══════════════════════════════════════════
+   LEFT PANEL
+   ══════════════════════════════════════════ */
 .brand-panel {
   display: none;
   position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #0a1628 0%, #0d2855 40%, #1a4a9e 100%);
-}
-@media (min-width: 1024px) {
-  .brand-panel { display: flex; flex: 0 0 52%; align-items: center; justify-content: center; }
-}
-
-/* Animated blobs */
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.25;
-  animation: drift 12s ease-in-out infinite;
-}
-.blob-1 {
-  width: 420px; height: 420px;
-  background: #1d6fd4;
-  top: -80px; left: -80px;
-  animation-duration: 14s;
-}
-.blob-2 {
-  width: 320px; height: 320px;
-  background: #f97316;
-  bottom: 20%; right: -60px;
-  animation-duration: 10s;
-  animation-delay: -4s;
-}
-.blob-3 {
-  width: 260px; height: 260px;
-  background: #1d6fd4;
-  bottom: -60px; left: 20%;
-  animation-duration: 18s;
-  animation-delay: -8s;
-}
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(20px, -20px) scale(1.05); }
-  66% { transform: translate(-15px, 15px) scale(0.96); }
-}
-
-/* Grid overlay */
-.grid-overlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-
-/* Brand content */
-.brand-content {
-  position: relative;
   z-index: 10;
+  flex: 0 0 54%;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 48px;
+}
+@media (min-width: 1024px) { .brand-panel { display: flex; } }
+
+.brand-inner {
+  position: relative;
+  width: 100%;
+  max-width: 470px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 32px;
-  padding: 48px 40px;
-  width: 100%;
-  max-width: 500px;
 }
 
-/* Logo card */
+/* Logo */
+.logo-wrap { position: relative; align-self: flex-start; }
+
+.logo-halo {
+  position: absolute;
+  inset: -24px;
+  background: radial-gradient(ellipse, rgba(29,111,212,.35) 0%, rgba(249,115,22,.12) 50%, transparent 70%);
+  filter: blur(20px);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 .logo-card {
-  background: rgba(255,255,255,0.95);
-  border-radius: 28px;
-  padding: 28px 36px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
-  backdrop-filter: blur(10px);
-  transform: translateY(24px);
-  opacity: 0;
-  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+  position: relative;
+  background: rgba(255,255,255,.97);
+  border-radius: 22px;
+  padding: 22px 34px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.12),
+    0 12px 40px rgba(0,0,0,.35),
+    0 0 56px rgba(29,111,212,.22);
+  transition: transform .3s ease, box-shadow .3s ease;
 }
-.logo-card--visible {
-  transform: translateY(0);
-  opacity: 1;
+.logo-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.16),
+    0 20px 56px rgba(0,0,0,.4),
+    0 0 72px rgba(29,111,212,.28);
 }
-.logo-img {
-  width: 220px;
-  height: auto;
-  display: block;
-}
+.logo-img { display: block; width: 196px; height: auto; }
 
-/* Brand text */
-.brand-text {
-  text-align: center;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.6s ease 0.15s, opacity 0.6s ease 0.15s;
-}
-.brand-text--visible { transform: translateY(0); opacity: 1; }
-.brand-headline {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.35;
-  margin: 0 0 8px;
-  letter-spacing: -0.02em;
-}
-.brand-sub {
-  font-size: 0.875rem;
-  color: rgba(255,255,255,0.55);
-  margin: 0;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-/* Feature pills */
-.feature-pills {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.6s ease 0.28s, opacity 0.6s ease 0.28s;
-}
-.feature-pills--visible { transform: translateY(0); opacity: 1; }
-.pill {
+/* Copy */
+.brand-eyebrow {
   display: inline-flex;
   align-items: center;
+  gap: 7px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: #f97316;
+  margin: 0 0 12px;
+}
+.brand-eyebrow::before {
+  content: '';
+  display: block;
+  width: 18px; height: 1.5px;
+  background: #f97316;
+  border-radius: 2px;
+}
+
+.brand-title {
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -.035em;
+  color: rgba(255,255,255,.94);
+  margin: 0 0 14px;
+}
+.brand-title__hl {
+  /* dégradé uniquement avec les couleurs existantes */
+  background: linear-gradient(90deg, #f97316 30%, #1d6fd4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-desc {
+  font-size: .9rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,.42);
+  margin: 0;
+}
+
+/* Feature list */
+.feat-list {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  padding: 6px 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 100px;
-  color: rgba(255,255,255,0.75);
-  font-size: 0.8rem;
-  font-weight: 500;
+}
+
+.feat-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.feat-item:hover {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.11);
+  transform: translateX(4px);
+}
+
+.feat-icon {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feat-icon svg { width: 17px; height: 17px; }
+/* bleu existant */
+.feat-icon--blue   { background: rgba(29,111,212,.2);  color: rgba(109,171,235,.95); }
+/* orange existant */
+.feat-icon--orange { background: rgba(249,115,22,.18); color: rgba(249,140,60,.95); }
+
+.feat-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.feat-text strong { font-size: .875rem; font-weight: 600; color: rgba(255,255,255,.88); }
+.feat-text span   { font-size: .775rem; color: rgba(255,255,255,.38); }
+
+.feat-check {
+  flex-shrink: 0;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(249,115,22,.15);
+  color: #f97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feat-check svg { width: 11px; height: 11px; }
+
+/* Stats */
+.stats {
+  display: flex;
+  align-items: center;
+  padding: 18px 22px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
   backdrop-filter: blur(8px);
 }
-.pill svg { width: 14px; height: 14px; }
 
-/* Floating icons */
-.float-icon {
-  position: absolute;
-  opacity: 0.4;
-  animation: float 6s ease-in-out infinite;
+.stat { flex: 1; text-align: center; }
+.stat-n {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: rgba(255,255,255,.9);
+  line-height: 1;
+  margin-bottom: 4px;
 }
-.float-icon svg { width: 64px; height: 64px; }
-.float-house { top: 12%; left: 8%; animation-delay: 0s; }
-.float-car { bottom: 18%; right: 6%; animation-delay: -3s; }
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(-3deg); }
-  50% { transform: translateY(-14px) rotate(3deg); }
+.stat-n em { font-style: normal; color: #f97316; font-size: 1rem; }
+.stat-l {
+  font-size: .7rem;
+  color: rgba(255,255,255,.35);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 500;
 }
+.stat-sep { width: 1px; height: 32px; background: rgba(255,255,255,.1); flex-shrink: 0; }
 
-/* Brand footer */
+/* Footer */
 .brand-footer {
-  color: rgba(255,255,255,0.3);
-  font-size: 0.75rem;
-  margin: 0;
   position: absolute;
-  bottom: 24px;
+  bottom: -24px;
   left: 0; right: 0;
+  font-size: .7rem;
+  color: rgba(255,255,255,.2);
   text-align: center;
+  margin: 0;
 }
 
-/* ─── RIGHT FORM PANEL ─── */
+/* ══════════════════════════════════════════
+   RIGHT PANEL — glassmorphism
+   ══════════════════════════════════════════ */
 .form-panel {
   flex: 1;
+  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: #f8fafc;
-  position: relative;
-  overflow: hidden;
-}
-.form-panel::before {
-  content: '';
-  position: absolute;
-  top: -200px; right: -200px;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%);
-  pointer-events: none;
-}
-.form-panel::after {
-  content: '';
-  position: absolute;
-  bottom: -150px; left: -150px;
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(29,111,212,0.07) 0%, transparent 70%);
-  pointer-events: none;
 }
 
-/* Form wrapper card */
-.form-wrapper {
+.glass-card {
   position: relative;
-  z-index: 1;
   width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border-radius: 24px;
-  padding: 40px 36px;
+  max-width: 426px;
+  /* glassmorphism sur fond bleu existant */
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 28px;
+  padding: 44px 40px;
   box-shadow:
-    0 1px 3px rgba(0,0,0,0.04),
-    0 8px 24px rgba(0,0,0,0.06),
-    0 24px 64px rgba(0,0,0,0.04);
-  border: 1px solid rgba(0,0,0,0.06);
-  transform: translateY(32px);
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 32px 72px rgba(0,0,0,.45),
+    0 8px 24px rgba(0,0,0,.3);
   opacity: 0;
-  transition: transform 0.65s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.5s ease;
+  transform: translateY(32px) scale(.985);
+  transition: opacity .55s ease, transform .7s cubic-bezier(.34,1.35,.64,1);
 }
-.form-wrapper--visible { transform: translateY(0); opacity: 1; }
+.glass-card.anim-in { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Ligne lumineuse en haut */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 12%; right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+}
 
 /* Mobile logo */
-.mobile-logo {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 28px;
+.mobile-logo { display: flex; justify-content: center; margin-bottom: 28px; }
+.mobile-logo__img {
+  width: 148px; height: auto;
+  filter: drop-shadow(0 0 14px rgba(29,111,212,.35));
 }
-.mobile-logo-img {
-  width: 160px;
-  height: auto;
+@media (min-width: 1024px) { .mobile-logo { display: none; } }
+
+/* Header */
+.card-head { margin-bottom: 26px; }
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  background: rgba(249,115,22,.12);
+  border: 1px solid rgba(249,115,22,.25);
+  border-radius: 100px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #f97316;
+  margin-bottom: 14px;
 }
-@media (min-width: 1024px) {
-  .mobile-logo { display: none; }
+.card-badge__dot {
+  width: 6px; height: 6px;
+  background: #f97316;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(249,115,22,.6);
+  animation: dotPulse 2.4s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.55; transform:scale(1.35); }
 }
 
-/* Form header */
-.form-header { margin-bottom: 28px; }
-.form-title {
+.card-title {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #0f172a;
+  letter-spacing: -.04em;
+  color: rgba(255,255,255,.95);
   margin: 0 0 6px;
-  letter-spacing: -0.03em;
 }
-.form-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
+.card-sub {
+  font-size: .875rem;
+  color: rgba(255,255,255,.4);
   margin: 0;
 }
 
-/* Error banner */
-.error-banner {
+/* Bannière d'erreur */
+.err-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  gap: 9px;
+  padding: 11px 15px;
+  background: rgba(220,38,38,.12);
+  border: 1px solid rgba(220,38,38,.28);
   border-radius: 12px;
-  color: #dc2626;
-  font-size: 0.875rem;
+  color: #fca5a5;
+  font-size: .85rem;
   font-weight: 500;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-.error-banner__icon { flex-shrink: 0; }
-.error-banner__icon svg { width: 18px; height: 18px; }
+.err-banner svg { flex-shrink:0; width:16px; height:16px; }
 
-/* Form body */
-.form-body { display: flex; flex-direction: column; gap: 20px; }
+/* ── Champs ── */
+.form { display: flex; flex-direction: column; gap: 18px; }
+.field { display: flex; flex-direction: column; gap: 7px; }
 
-/* Fields */
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field__label {
-  font-size: 0.8rem;
+.field__lbl {
+  font-size: .75rem;
   font-weight: 600;
-  color: #374151;
-  letter-spacing: 0.01em;
-  transition: color 0.2s;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+  transition: color .18s;
 }
-.field--focused .field__label { color: #1d6fd4; }
-.field--error .field__label { color: #dc2626; }
+.field--focus .field__lbl { color: rgba(249,115,22,.85); }
+.field--err   .field__lbl { color: rgba(248,113,113,.85); }
 
-.field__input-wrap {
+.field__row {
   position: relative;
   display: flex;
   align-items: center;
 }
-.field__icon {
+
+.field__ico {
   position: absolute;
-  left: 14px;
-  color: #9ca3af;
-  transition: color 0.2s;
+  left: 13px;
+  color: rgba(255,255,255,.22);
   pointer-events: none;
   display: flex;
+  transition: color .18s;
 }
-.field__icon svg { width: 18px; height: 18px; }
-.field--focused .field__icon { color: #1d6fd4; }
-.field--error .field__icon { color: #dc2626; }
+.field__ico svg { width: 17px; height: 17px; }
+.field--focus .field__ico { color: rgba(249,115,22,.65); }
+.field--err   .field__ico { color: rgba(248,113,113,.65); }
 
-.field__input {
+.field__inp {
   width: 100%;
-  padding: 13px 14px 13px 44px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  color: #0f172a;
+  padding: 13px 13px 13px 43px;
+  background: rgba(255,255,255,.07);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 13px;
+  font-size: .9rem;
+  font-family: inherit;
+  color: rgba(255,255,255,.92);
   outline: none;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: border-color .18s, background .18s, box-shadow .18s;
   -webkit-appearance: none;
 }
-.field__input::placeholder { color: #cbd5e1; }
-.field__input:focus {
-  background: #fff;
-  border-color: #1d6fd4;
-  box-shadow: 0 0 0 3px rgba(29,111,212,0.1);
+.field__inp::placeholder { color: rgba(255,255,255,.2); }
+/* Fix autofill couleur */
+.field__inp:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 40px #0d2855 inset !important;
+  -webkit-text-fill-color: rgba(255,255,255,.92) !important;
 }
-.field--error .field__input {
-  border-color: #f87171;
-  background: #fff;
+.field__inp:focus {
+  background: rgba(255,255,255,.1);
+  border-color: rgba(249,115,22,.65);
+  box-shadow: 0 0 0 3px rgba(249,115,22,.14), 0 0 0 1px rgba(249,115,22,.25) inset;
 }
-.field--error .field__input:focus {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+.field--err .field__inp {
+  border-color: rgba(248,113,113,.45);
+  background: rgba(220,38,38,.07);
 }
-.field__input--password { padding-right: 44px; }
+.field--err .field__inp:focus {
+  border-color: rgba(248,113,113,.75);
+  box-shadow: 0 0 0 3px rgba(220,38,38,.1);
+}
+.field__inp--pwd { padding-right: 44px; }
 
-.field__toggle {
+/* Toggle password */
+.field__eye {
   position: absolute;
-  right: 14px;
+  right: 12px;
   background: none;
   border: none;
   cursor: pointer;
-  color: #94a3b8;
-  padding: 0;
+  color: rgba(255,255,255,.26);
+  padding: 4px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
-  transition: color 0.2s;
+  transition: color .18s, background .18s;
 }
-.field__toggle:hover { color: #1d6fd4; }
-.field__toggle svg { width: 18px; height: 18px; }
+.field__eye:hover {
+  color: rgba(249,115,22,.8);
+  background: rgba(249,115,22,.08);
+}
+.field__eye svg { width: 17px; height: 17px; }
 
-.field__error {
+/* Message d'erreur inline */
+.field__msg {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.775rem;
-  color: #dc2626;
-  margin: 0;
+  font-size: .775rem;
+  color: #fca5a5;
   font-weight: 500;
+  margin: 0;
 }
-.field__error svg { width: 13px; height: 13px; flex-shrink: 0; }
+.field__msg svg { width: 13px; height: 13px; flex-shrink: 0; }
 
-/* Remember me */
-.remember-row { display: flex; align-items: center; justify-content: space-between; }
-.remember-label {
-  display: flex;
+/* Se souvenir */
+.remember {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: #64748b;
   user-select: none;
 }
-.remember-checkbox-wrap { position: relative; }
-.remember-input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.remember-custom {
-  width: 18px;
-  height: 18px;
+.remember__native { position: absolute; opacity: 0; width: 0; height: 0; }
+.remember__box {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
   border-radius: 5px;
-  border: 1.5px solid #cbd5e1;
-  background: #f8fafc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  border: 1.5px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.07);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .18s;
 }
-.remember-custom--checked {
-  background: #1d6fd4;
-  border-color: #1d6fd4;
+.remember__box--on {
+  background: #f97316;
+  border-color: #f97316;
+  box-shadow: 0 0 8px rgba(249,115,22,.35);
 }
-.remember-custom svg { width: 10px; height: 10px; color: #fff; stroke-width: 2.5; }
+.remember__box svg { width: 10px; height: 10px; color: #fff; }
+.remember__lbl { font-size: .85rem; color: rgba(255,255,255,.42); }
 
-/* Submit button */
-.submit-btn {
+/* ── Bouton — couleur existante #f97316→#ea580c ── */
+.cta-btn {
   width: 100%;
   padding: 14px;
+  margin-top: 4px;
   border: none;
   border-radius: 13px;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
   cursor: pointer;
-  letter-spacing: 0.01em;
-  transition:
-    transform 0.15s,
-    box-shadow 0.2s,
-    opacity 0.2s,
-    filter 0.2s;
-  box-shadow: 0 4px 14px rgba(249,115,22,0.35), 0 1px 3px rgba(249,115,22,0.2);
-  margin-top: 4px;
+  font-family: inherit;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: #fff;
+  /* gradient orange existant */
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 4px 16px rgba(249,115,22,.32),
+    0 1px 3px rgba(0,0,0,.2);
+  transition: transform .14s ease, box-shadow .18s ease, filter .18s;
+  position: relative;
+  overflow: hidden;
 }
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.005);
-  box-shadow: 0 8px 24px rgba(249,115,22,0.4), 0 2px 6px rgba(249,115,22,0.25);
-  filter: brightness(1.04);
+/* Brillance interne */
+.cta-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.14) 0%, transparent 55%);
+  border-radius: inherit;
+  pointer-events: none;
 }
-.submit-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
-  box-shadow: 0 2px 8px rgba(249,115,22,0.3);
+.cta-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.008);
+  filter: brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.2),
+    0 8px 28px rgba(249,115,22,.42),
+    0 2px 6px rgba(0,0,0,.25);
 }
-.submit-btn:disabled {
-  opacity: 0.75;
-  cursor: not-allowed;
+.cta-btn:active:not(:disabled) {
+  transform: translateY(0) scale(.995);
+  box-shadow: 0 2px 8px rgba(249,115,22,.25);
 }
-.submit-btn__content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.cta-btn:disabled { opacity: .65; cursor: not-allowed; }
+
+.cta-btn__inner,
+.cta-btn__spin {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
 }
-.submit-btn__content svg { width: 18px; height: 18px; }
-.submit-btn__spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-.submit-btn__spinner svg {
-  width: 18px;
-  height: 18px;
-  animation: spin 0.8s linear infinite;
+.cta-btn__inner svg { width: 17px; height: 17px; }
+.cta-btn__spin svg  {
+  width: 18px; height: 18px;
+  animation: spin .7s linear infinite;
+  stroke: white;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Form footer */
-.form-footer {
+/* Footer */
+.card-footer {
   text-align: center;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin: 24px 0 0;
+  font-size: .71rem;
+  color: rgba(255,255,255,.18);
+  margin: 26px 0 0;
 }
 
-/* ─── Transitions ─── */
-.slide-down-enter-active { transition: all 0.25s ease; }
-.slide-down-leave-active { transition: all 0.2s ease; }
-.slide-down-enter-from { opacity: 0; transform: translateY(-6px); }
-.slide-down-leave-to { opacity: 0; transform: translateY(-4px); }
+/* ══════════════════════════════════════════
+   TRANSITIONS
+   ══════════════════════════════════════════ */
+.msg-enter-active { transition: all .22s ease; }
+.msg-leave-active { transition: all .16s ease; }
+.msg-enter-from  { opacity: 0; transform: translateY(-5px); }
+.msg-leave-to    { opacity: 0; }
 
-.shake-enter-active {
-  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
-}
-.shake-leave-active { transition: opacity 0.2s; }
-.shake-leave-to { opacity: 0; }
+.shake-enter-active { animation: shake .45s cubic-bezier(.36,.07,.19,.97) both; }
+.shake-leave-active { transition: opacity .18s; }
+.shake-leave-to     { opacity: 0; }
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  15%, 45%, 75% { transform: translateX(-5px); }
-  30%, 60%, 90% { transform: translateX(5px); }
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-5px); }
+  40%,80% { transform: translateX(5px); }
 }
 
-/* ─── Mobile tweaks ─── */
-@media (max-width: 480px) {
-  .form-wrapper {
-    padding: 28px 20px;
-    border-radius: 20px;
-  }
-  .form-title { font-size: 1.5rem; }
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+@media (max-width: 500px) {
+  .glass-card { padding: 30px 20px; border-radius: 22px; }
+  .card-title  { font-size: 1.5rem; }
 }
 </style>

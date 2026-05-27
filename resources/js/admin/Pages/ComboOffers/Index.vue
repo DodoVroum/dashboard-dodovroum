@@ -84,13 +84,46 @@
           </button>
         </div>
       </div>
+      <!-- Toggle offres expirées -->
+      <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
+        <button
+          type="button"
+          @click="hideExpired = !hideExpired"
+          class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <span
+            class="inline-flex w-8 h-4 rounded-full transition-colors"
+            :class="hideExpired ? 'bg-slate-300' : 'bg-blue-500'"
+          >
+            <span
+              class="inline-block w-4 h-4 bg-white rounded-full shadow transition-transform"
+              :class="hideExpired ? 'translate-x-0' : 'translate-x-4'"
+            ></span>
+          </span>
+          <span>Afficher les offres expirées</span>
+          <span v-if="expiredCount > 0" class="px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded-full font-medium">
+            {{ expiredCount }}
+          </span>
+        </button>
+      </div>
     </form>
 
     <!-- Tableau des offres -->
     <div class="bg-white border border-slate-200 rounded-xl" style="overflow-x: auto; overflow-y: visible;">
-      <div v-if="comboOffers.length === 0" class="p-12 text-center">
-        <p class="text-slate-500">Aucune offre combinée trouvée</p>
+      <div v-if="visibleOffers.length === 0" class="p-12 text-center">
+        <p class="text-slate-500">
+          {{ comboOffers.length > 0 ? 'Toutes les offres sont expirées.' : 'Aucune offre combinée trouvée' }}
+        </p>
+        <button
+          v-if="comboOffers.length > 0 && hideExpired"
+          type="button"
+          @click="hideExpired = false"
+          class="mt-3 text-sm text-blue-600 hover:text-blue-700 underline"
+        >
+          Afficher les offres expirées ({{ expiredCount }})
+        </button>
         <Link
+          v-else
           :href="route('admin.combo-offers.create')"
           class="mt-4 inline-block px-4 py-2 text-blue-600 hover:text-blue-700"
         >
@@ -126,14 +159,19 @@
         </thead>
         <tbody class="divide-y divide-slate-200" style="overflow: visible;">
           <tr
-            v-for="offer in comboOffers"
+            v-for="offer in visibleOffers"
             :key="offer.id"
-            class="hover:bg-slate-50 cursor-pointer transition-colors"
+            class="cursor-pointer transition-colors"
+            :class="isExpired(offer.endDate)
+              ? 'bg-slate-50/80 opacity-70 hover:opacity-90'
+              : 'hover:bg-slate-50'"
             @click="goToOffer(offer)"
           >
+            <!-- Offre -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center">
-                <div class="w-12 h-12 rounded-lg mr-3 flex-shrink-0 overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center"
+                  :class="isExpired(offer.endDate) ? 'grayscale' : ''">
                   <img
                     v-if="getOfferImage(offer) && !imageErrors[offer.id]"
                     :src="getStorageImageUrl(getOfferImage(offer))"
@@ -142,64 +180,84 @@
                     @error="() => handleImageError(offer.id)"
                     @load="() => imageErrors[offer.id] = false"
                   />
-                  <Package
-                    v-else
-                    class="w-6 h-6 text-slate-400"
-                  />
+                  <Package v-else class="w-6 h-6 text-slate-400" />
                 </div>
-                <div>
-              <div class="text-sm font-medium text-slate-900">
-                {{ offer.title || offer.name || 'Offre sans nom' }}
-              </div>
-              <div v-if="offer.description" class="text-sm text-slate-500 truncate max-w-xs">
-                {{ offer.description }}
+                <div class="min-w-0">
+                  <div class="text-sm font-medium" :class="isExpired(offer.endDate) ? 'text-slate-500' : 'text-slate-900'">
+                    {{ offer.title || offer.name || 'Offre sans nom' }}
+                  </div>
+                  <div v-if="offer.description" class="text-xs text-slate-400 truncate max-w-xs">
+                    {{ offer.description }}
                   </div>
                 </div>
               </div>
             </td>
+            <!-- Résidence -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-slate-900">
+              <div class="text-sm" :class="isExpired(offer.endDate) ? 'text-slate-400' : 'text-slate-900'">
                 {{ getResidenceName(offer) }}
               </div>
             </td>
+            <!-- Véhicule -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-slate-900">
+              <div class="text-sm" :class="isExpired(offer.endDate) ? 'text-slate-400' : 'text-slate-900'">
                 {{ getVehicleName(offer) }}
               </div>
             </td>
+            <!-- Prix -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-slate-900">
+              <div class="text-sm font-medium" :class="isExpired(offer.endDate) ? 'text-slate-400' : 'text-slate-900'">
                 {{ formatPrice(offer.discountedPrice || offer.price || 0) }} CFA
               </div>
-              <div v-if="offer.originalPrice && offer.discountedPrice" class="text-xs text-slate-500 line-through">
+              <div v-if="offer.originalPrice && offer.discountedPrice && offer.originalPrice > offer.discountedPrice"
+                class="text-xs text-slate-400 line-through">
                 {{ formatPrice(offer.originalPrice) }} CFA
               </div>
-              <div v-if="offer.discount || offer.discountPercentage" class="text-xs text-emerald-600">
+              <div v-if="(offer.discount || offer.discountPercentage) && !isExpired(offer.endDate)"
+                class="text-xs text-emerald-600">
                 -{{ offer.discount || offer.discountPercentage }}%
               </div>
             </td>
+            <!-- Dates -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-slate-900">
+              <div class="text-sm" :class="isExpired(offer.endDate) ? 'text-slate-400' : 'text-slate-700'">
                 {{ formatDates(offer.startDate, offer.endDate) }}
               </div>
             </td>
+            <!-- Statut -->
             <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
-                :class="getStatusClass(offer.status ?? offer.available ?? 'active')"
-              >
-                {{ getStatusLabel(offer.status ?? offer.available ?? 'active') }}
-              </span>
+              <div class="flex flex-col gap-1">
+                <!-- Badge expiré prioritaire -->
+                <span v-if="isExpired(offer.endDate)"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700 w-fit">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Expiré
+                </span>
+                <span v-else
+                  class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full w-fit"
+                  :class="getStatusClass(offer.status ?? offer.available ?? 'active')">
+                  {{ getStatusLabel(offer.status ?? offer.available ?? 'active') }}
+                </span>
+              </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" style="position: relative; overflow: visible !important;" @click.stop>
+            <!-- Actions -->
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+              style="position: relative; overflow: visible !important;" @click.stop>
               <div class="relative inline-block text-left">
                 <button
                   :ref="el => setButtonRef(offer.id, el)"
                   @click.stop="toggleMenu(offer.id)"
-                  class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                  class="p-2 rounded-lg transition-colors"
+                  :class="isExpired(offer.endDate)
+                    ? 'text-slate-300 hover:text-slate-400 hover:bg-slate-100'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                   </svg>
                 </button>
                 <Teleport to="body">
@@ -210,31 +268,60 @@
                     @click.stop
                     style="z-index: 999999 !important;"
                   >
-                  <div class="py-1">
-                    <Link
-                      :href="route('admin.combo-offers.show', offer.id)"
-                      class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-                      @click="closeMenu"
-                    >
-                      Voir les détails
-                    </Link>
-                    <div class="border-t border-slate-200 my-1"></div>
-                    <Link
-                      :href="route('admin.combo-offers.edit', offer.id)"
-                      class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-                      @click="closeMenu"
-                    >
-                      Modifier
-                    </Link>
-                    <div class="border-t border-slate-200 my-1"></div>
-                    <button
-                      @click="confirmDelete(offer); closeMenu()"
-                      class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
-                    >
-                      Supprimer
-                    </button>
+                    <div class="py-1">
+                      <!-- Voir : toujours disponible -->
+                      <Link
+                        :href="route('admin.combo-offers.show', offer.id)"
+                        class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                        @click="closeMenu"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Voir les détails
+                      </Link>
+                      <div class="border-t border-slate-100 my-1"></div>
+                      <!-- Modifier : désactivé si expiré -->
+                      <template v-if="!isExpired(offer.endDate)">
+                        <Link
+                          :href="route('admin.combo-offers.edit', offer.id)"
+                          class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                          @click="closeMenu"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Modifier
+                        </Link>
+                        <div class="border-t border-slate-100 my-1"></div>
+                        <button
+                          @click="confirmDelete(offer); closeMenu()"
+                          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Supprimer
+                        </button>
+                      </template>
+                      <template v-else>
+                        <span class="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 cursor-not-allowed">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Modifier (expiré)
+                        </span>
+                        <div class="border-t border-slate-100 my-1"></div>
+                        <span class="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 cursor-not-allowed">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Supprimer (expiré)
+                        </span>
+                      </template>
+                    </div>
                   </div>
-                </div>
                 </Teleport>
               </div>
             </td>
@@ -317,7 +404,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { Teleport } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { Package, Calendar, DollarSign, TrendingUp } from 'lucide-vue-next';
@@ -399,6 +486,36 @@ const filters = reactive({
   search: props.filters?.search || '',
   status: props.filters?.status || '',
 });
+
+// ── Gestion des offres expirées ──────────────────────────────────────────────
+
+/** Parse une date sans bug fuseau horaire (YYYY-MM-DD traité en heure locale, pas UTC) */
+const parseLocalDate = (dateStr: string): Date => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d, 23, 59, 59); // fin de journée locale
+  }
+  return new Date(dateStr);
+};
+
+const isExpired = (endDate?: string | null): boolean => {
+  if (!endDate) return false;
+  return parseLocalDate(endDate) < new Date();
+};
+
+const hideExpired = ref(true);
+
+const expiredCount = computed(() =>
+  props.comboOffers.filter(o => isExpired(o.endDate)).length
+);
+
+const visibleOffers = computed(() =>
+  hideExpired.value
+    ? props.comboOffers.filter(o => !isExpired(o.endDate))
+    : props.comboOffers
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const offerToDelete = ref<typeof props.comboOffers[0] | null>(null);
 const offerHasBookings = ref(false);
@@ -594,16 +711,16 @@ const formatPrice = (price: number): string => {
 };
 
 const formatDates = (startDate?: string, endDate?: string): string => {
-  if (!startDate || !endDate) {
-    return 'Dates non définies';
-  }
-  
+  if (!startDate || !endDate) return 'Dates non définies';
   try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+    // parseLocalDate évite le décalage UTC (ex: 2026-05-19 → 18 mai en UTC-1)
+    const start = parseLocalDate(startDate);
+    const end = parseLocalDate(endDate);
+    const startStr = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const endStr = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${startStr} → ${endStr}`;
   } catch {
-    return `${startDate} - ${endDate}`;
+    return `${startDate} – ${endDate}`;
   }
 };
 

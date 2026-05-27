@@ -509,6 +509,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import AvailabilityCalendar from '../../../Components/AvailabilityCalendar.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
+import { formatDate } from '../../../utils/dates';
 import {
   ArrowLeft,
   Pencil,
@@ -731,15 +732,7 @@ const formatNumber = (num: number): string => {
   return new Intl.NumberFormat('fr-FR').format(num);
 };
 
-const formatDate = (date: string | null | undefined): string => {
-  if (!date) return 'N/A';
-  try {
-    const d = new Date(date);
-    return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
-  } catch {
-    return date;
-  }
-};
+// formatDate importé depuis utils/dates (timezone CI, fr-FR)
 
 const getStatusClass = (status: string | boolean): string => {
   if (typeof status === 'boolean') {

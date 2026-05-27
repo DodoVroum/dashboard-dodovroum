@@ -325,6 +325,7 @@ import { Eye, Pencil, Trash2, MoreVertical, Plus, Package, Calendar, DollarSign,
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import Pagination from '../../../Components/Pagination.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
+import { formatDateRange } from '../../../utils/dates';
 
 defineOptions({
   layout: OwnerLayout,
@@ -481,24 +482,8 @@ const STATUS_LABEL: Record<string, string> = {
   inactive: 'Désactivée',
 };
 
-/** Parse YYYY-MM-DD en heure locale (évite le bug UTC) */
-const parseLocalDate = (s: string): Date => {
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s);
-};
-
-const formatDates = (startDate?: string, endDate?: string): string => {
-  if (!startDate || !endDate) return 'Non spécifié';
-  try {
-    const start = parseLocalDate(startDate);
-    const end = parseLocalDate(endDate);
-    const startStr = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const endStr = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    return `${startStr} → ${endStr}`;
-  } catch {
-    return `${startDate} – ${endDate}`;
-  }
-};
+const formatDates = (startDate?: string, endDate?: string): string =>
+  formatDateRange(startDate, endDate);
 
 const getResidenceName = (offer: any): string => {
   if (offer.residence) {

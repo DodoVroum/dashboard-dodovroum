@@ -368,6 +368,7 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../utils/imageUrl';
+import { parseApiDate } from '../../utils/dates';
 import { z } from 'zod';
 
 const props = defineProps<{
@@ -576,11 +577,11 @@ const packSchema = z.object({
   isActive: z.boolean().optional(),
   isVerified: z.boolean().optional(),
 }).refine((data) => {
-  // Vérifier que la date de fin est après la date de début
+  // Vérifier que la date de fin est après la date de début (parsing CI-safe)
   if (data.startDate && data.endDate) {
-    const start = new Date(data.startDate);
-    const end = new Date(data.endDate);
-    return end > start;
+    const start = parseApiDate(data.startDate);
+    const end   = parseApiDate(data.endDate);
+    return !!start && !!end && end > start;
   }
   return true;
 }, {

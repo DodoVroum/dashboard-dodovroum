@@ -411,6 +411,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { Package, Calendar, DollarSign, TrendingUp } from 'lucide-vue-next';
 import Pagination from '../../Components/Pagination.vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
+import { formatDateRange } from '../../utils/dates';
 
 const props = defineProps<{
   comboOffers: Array<{
@@ -701,24 +702,8 @@ const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);
 };
 
-/** Parse YYYY-MM-DD en heure locale (évite le bug UTC: new Date('2026-05-19') = minuit UTC) */
-const parseLocalDate = (s: string): Date => {
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s);
-};
-
-const formatDates = (startDate?: string, endDate?: string): string => {
-  if (!startDate || !endDate) return 'Dates non définies';
-  try {
-    const start = parseLocalDate(startDate);
-    const end = parseLocalDate(endDate);
-    const startStr = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const endStr = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    return `${startStr} → ${endStr}`;
-  } catch {
-    return `${startDate} – ${endDate}`;
-  }
-};
+const formatDates = (startDate?: string, endDate?: string): string =>
+  formatDateRange(startDate, endDate);
 
 const getResidenceName = (offer: typeof props.comboOffers[0]): string => {
   if (offer.residence) {

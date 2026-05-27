@@ -343,6 +343,7 @@ import { Teleport } from 'vue';
 import { Calendar, CheckCircle, DollarSign, TrendingUp, Building2, Truck, Package } from 'lucide-vue-next';
 import Pagination from '../../Components/Pagination.vue';
 import AdminLayout from '../../Components/Layouts/AdminLayout.vue';
+import { formatDate } from '../../utils/dates';
 
 defineOptions({
   layout: AdminLayout,
@@ -531,18 +532,7 @@ const resetFilters = () => {
   applyFilters();
 };
 
-const formatDate = (date: string | null): string => {
-  if (!date) return 'N/A';
-  try {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return date;
-  }
-};
+// formatDate importé depuis utils/dates (timezone CI, fr-FR)
 
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);

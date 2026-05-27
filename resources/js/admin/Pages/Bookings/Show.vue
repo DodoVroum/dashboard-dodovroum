@@ -660,6 +660,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import AdminLayout from '../../Components/Layouts/AdminLayout.vue';
 import { getStorageImageUrl, pickDisplayableImage } from '../../utils/imageUrl';
+import { formatDate, formatDateRange, parseApiDate, todayCI, isDatePast } from '../../utils/dates';
 import {
   ArrowLeft,
   Printer,
@@ -785,42 +786,9 @@ const markAsPaidForm = ref({
   notes: '',
 });
 
-const formatDate = (date: string | null): string => {
-  if (!date) return 'N/A';
-  try {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return date;
-  }
-};
-
-const formatShortDate = (date: string | null): string => {
-  if (!date) return 'N/A';
-  try {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit',
-    });
-  } catch {
-    return date;
-  }
-};
-
-const formatDateRange = (startDate: string | null, endDate: string | null): string => {
-  if (!startDate || !endDate) return 'Dates non définies';
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} - ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-  } catch {
-    return `${startDate} - ${endDate}`;
-  }
-};
+// formatDate + formatDateRange importés depuis utils/dates (timezone CI, fr-FR)
+const formatShortDate = (date: string | null): string =>
+  formatDate(date, 'short');
 
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);
@@ -959,53 +927,29 @@ const getGuestsCount = (): number => {
 };
 
 const isStartDatePassed = (): boolean => {
+  // La date de début est passée si elle est <= aujourd'hui (heure CI)
   if (!props.booking.startDate) return false;
-  try {
-    const start = new Date(props.booking.startDate);
-    start.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // La date de début est passée si elle est <= aujourd'hui
-    return start <= today;
-  } catch {
-    return false;
-  }
+  const startStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Abidjan' })
+    .format(parseApiDate(props.booking.startDate) ?? new Date(NaN));
+  return !!startStr && startStr <= todayCI();
 };
 
 const isEndDatePassed = (): boolean => {
-  if (!props.booking.endDate) return false;
-  try {
-    const end = new Date(props.booking.endDate);
-    end.setHours(23, 59, 59, 999); // Fin de journée
-    const today = new Date();
-    // La date de fin est passée si elle est < aujourd'hui (pas <= car on peut être le jour de fin)
-    return end < today;
-  } catch {
-    return false;
-  }
+  // La date de fin est passée si elle est < aujourd'hui (heure CI)
+  return isDatePast(props.booking.endDate);
 };
 
 // Vérifier si le check-out est complété (soit via checkOutAt, soit si la date de fin est passée)
 const isCheckOutCompleted = computed(() => {
-  // Si checkOutAt existe, le check-out est complété
-  if (props.booking.checkOutAt) {
-    return true;
-  }
-  // Sinon, si la date de fin est passée, considérer le check-out comme complété
+  if (props.booking.checkOutAt) return true;
   return isEndDatePassed();
 });
 
 const isStartDateToday = (): boolean => {
   if (!props.booking.startDate) return false;
-  try {
-    const start = new Date(props.booking.startDate);
-    start.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return start.getTime() === today.getTime();
-  } catch {
-    return false;
-  }
+  const startStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Abidjan' })
+    .format(parseApiDate(props.booking.startDate) ?? new Date(NaN));
+  return startStr === todayCI();
 };
 
 const getInitials = (name: string): string => {
@@ -1057,12 +1001,8 @@ const canShowManualCheckOut = computed(() => {
   if (b.isStayInProgress === true) return true;
   // Fallback : clé récupérée + date de fin pas encore passée
   if (b.keyRetrievedAt && b.endDate) {
-    try {
-      const end = new Date(b.endDate);
-      return new Date() <= end;
-    } catch {
-      return false;
-    }
+    // Fin de séjour pas encore passée (heure CI)
+    return !isDatePast(b.endDate);
   }
   return false;
 });

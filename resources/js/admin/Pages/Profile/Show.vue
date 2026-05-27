@@ -275,6 +275,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
 import ProfileLayout from '../../Components/Layouts/ProfileLayout.vue';
+import { formatDate } from '../../utils/dates';
 
 defineOptions({
   layout: ProfileLayout,
@@ -376,18 +377,6 @@ const resetForm = () => {
   form.clearErrors();
 };
 
-const formatDate = (dateString: string): string => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch (e) {
-    return dateString;
-  }
-};
+// formatDate importé depuis utils/dates (timezone CI, fr-FR)
 </script>
 

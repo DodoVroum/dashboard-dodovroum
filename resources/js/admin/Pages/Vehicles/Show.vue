@@ -489,6 +489,7 @@ import { Teleport } from 'vue';
 import AdminLayout from '../../Components/Layouts/AdminLayout.vue';
 import AvailabilityCalendar from '../../Components/AvailabilityCalendar.vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
+import { formatDateRange } from '../../utils/dates';
 import {
   ArrowLeft,
   Pencil,
@@ -714,17 +715,7 @@ const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);
 };
 
-const formatDateRange = (startDate: string, endDate: string): string => {
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const startFormatted = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const endFormatted = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    return `${startFormatted} - ${endFormatted}`;
-  } catch {
-    return `${startDate} - ${endDate}`;
-  }
-};
+// formatDateRange importé depuis utils/dates (timezone CI, fr-FR)
 
 const formatNumber = (value: number): string => {
   return new Intl.NumberFormat('fr-FR').format(value);

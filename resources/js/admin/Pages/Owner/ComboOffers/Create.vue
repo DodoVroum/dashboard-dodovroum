@@ -320,6 +320,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
+import { todayCI, futureDateCI } from '../../../utils/dates';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 
 defineOptions({
@@ -532,14 +533,10 @@ const route = (name: string, params?: any): string => {
   return routes[name] || '#';
 };
 
-// Dates par défaut (évite l'échec de validation si l'utilisateur n'a pas rempli les dates)
+// Dates par défaut en heure Côte d'Ivoire (Africa/Abidjan, UTC+0)
 const setDefaultDates = () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const oneYearLater = new Date();
-  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-  const endDefault = oneYearLater.toISOString().slice(0, 10);
-  if (!form.startDate) form.startDate = today;
-  if (!form.endDate) form.endDate = endDefault;
+  if (!form.startDate) form.startDate = todayCI();
+  if (!form.endDate)   form.endDate   = futureDateCI(365);
 };
 
 // Charger les propriétés au montage

@@ -304,6 +304,7 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../utils/imageUrl';
+import { toInputDate } from '../../utils/dates';
 
 const props = defineProps<{
   comboOffer: {
@@ -347,8 +348,8 @@ const form = useForm({
   nbJours: props.comboOffer?.nbJours || null,
   imageUrl: props.comboOffer?.imageUrl || '',
   images: initialImages,
-  startDate: props.comboOffer?.startDate ? props.comboOffer.startDate.split('T')[0] : '',
-  endDate: props.comboOffer?.endDate ? props.comboOffer.endDate.split('T')[0] : '',
+  startDate: toInputDate(props.comboOffer?.startDate),
+  endDate:   toInputDate(props.comboOffer?.endDate),
   isActive: props.comboOffer?.isActive ?? true,
   isVerified: props.comboOffer?.isVerified ?? false,
 });

@@ -562,6 +562,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
+import { formatDateTime } from '../../utils/dates';
 
 const props = defineProps<{
   user: {
@@ -613,21 +614,8 @@ const getRoleClass = (role: string): string => {
   return 'bg-slate-100 text-slate-800';
 };
 
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
+// Alias : les timestamps utilisateurs (createdAt, verifiedAt…) utilisent formatDateTime (avec heure)
+const formatDate = (dateString: string | null): string => formatDateTime(dateString);
 
 const formatPrice = (price: number): string => {
   if (!price) return '0';

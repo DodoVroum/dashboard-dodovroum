@@ -322,6 +322,7 @@ import { Calendar, CheckCircle, DollarSign, TrendingUp, Building2, Truck, Packag
 import Pagination from '../../../Components/Pagination.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
+import { formatDateRange } from '../../../utils/dates';
 
 defineOptions({
   layout: OwnerLayout,
@@ -579,16 +580,7 @@ const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);
 };
 
-const formatDateRange = (startDate?: string, endDate?: string): string => {
-  if (!startDate || !endDate) return 'Dates non définies';
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.toLocaleDateString('fr-FR')} - ${end.toLocaleDateString('fr-FR')}`;
-  } catch {
-    return `${startDate} - ${endDate}`;
-  }
-};
+// formatDateRange importé depuis utils/dates (timezone CI, fr-FR)
 
 const isPending = (status: string): boolean => {
   if (!status) return false;

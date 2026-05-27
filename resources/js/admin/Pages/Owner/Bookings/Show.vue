@@ -425,6 +425,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import { getStorageImageUrl, pickDisplayableImage } from '../../../utils/imageUrl';
+import { formatDateRange, parseApiDate, todayCI, isDatePast } from '../../../utils/dates';
 import {
   ArrowLeft,
   Printer,
@@ -509,29 +510,17 @@ const props = defineProps<{
 
 const showTechnicalInfo = ref(false);
 
+// formatDateRange importé depuis utils/dates (timezone CI, fr-FR)
 const formatShortDate = (date: string | null | undefined): string => {
   if (!date) return 'Non définie';
-  try {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit',
-    });
-  } catch {
-    return date;
-  }
+  return new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Africa/Abidjan',
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+  }).format(parseApiDate(date) ?? new Date(NaN));
 };
 
-const formatDateRange = (startDate: string | null | undefined, endDate: string | null | undefined): string => {
-  if (!startDate || !endDate) return 'Dates non définies';
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} - ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-  } catch {
-    return `${startDate} - ${endDate}`;
-  }
-};
 
 const formatPrice = (price: number | null | undefined): string => {
   if (!price) return '0';
@@ -637,15 +626,10 @@ const formatUnitSuffix = (label: string | null | undefined): string => {
 
 const getNightsCount = (): number => {
   if (!props.booking.startDate || !props.booking.endDate) return 0;
-  try {
-    const start = new Date(props.booking.startDate);
-    const end = new Date(props.booking.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  } catch {
-    return 0;
-  }
+  const start = parseApiDate(props.booking.startDate);
+  const end   = parseApiDate(props.booking.endDate);
+  if (!start || !end) return 0;
+  return Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 };
 
 const getGuestsCount = (): number => {
@@ -670,26 +654,10 @@ const getInitials = (name: string | null | undefined): string => {
   return name.substring(0, 2).toUpperCase();
 };
 
-const isEndDatePassed = (): boolean => {
-  if (!props.booking.endDate) return false;
-  try {
-    const end = new Date(props.booking.endDate);
-    end.setHours(23, 59, 59, 999); // Fin de journée
-    const today = new Date();
-    // La date de fin est passée si elle est < aujourd'hui (pas <= car on peut être le jour de fin)
-    return end < today;
-  } catch {
-    return false;
-  }
-};
+const isEndDatePassed = (): boolean => isDatePast(props.booking.endDate);
 
-// Vérifier si le check-out est complété (soit via checkOutAt, soit si la date de fin est passée)
 const isCheckOutCompleted = computed(() => {
-  // Si checkOutAt existe, le check-out est complété
-  if (props.booking.checkOutAt) {
-    return true;
-  }
-  // Sinon, si la date de fin est passée, considérer le check-out comme complété
+  if (props.booking.checkOutAt) return true;
   return isEndDatePassed();
 });
 
@@ -751,12 +719,7 @@ const canShowManualCheckOut = computed(() => {
   if (b.checkOutAt) return false;
   if (b.isStayInProgress === true) return true;
   if (b.keyRetrievedAt && b.endDate) {
-    try {
-      const end = new Date(b.endDate);
-      return new Date() <= end;
-    } catch {
-      return false;
-    }
+    return !isDatePast(b.endDate);
   }
   return false;
 });

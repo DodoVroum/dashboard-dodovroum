@@ -482,6 +482,8 @@ const removeImage = (index: number) => {
 };
 
 const submit = () => {
+  const payload = form.data();
+  console.log('DEBUG_PAYLOAD_ENVOYE:', JSON.stringify(payload, null, 2));
   form.put(`/owner/residences/${props.residence.id}`, {
     onSuccess: () => {
       // Redirection gérée par le contrôleur

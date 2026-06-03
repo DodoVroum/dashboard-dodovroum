@@ -13,9 +13,6 @@
       </Link>
     </div>
 
-    <div class="bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded-lg text-sm mb-4">
-      Sélectionnez le <strong>propriétaire</strong> : la résidence sera enregistrée à son nom. Si une erreur s’affiche à la création, le backend API doit être mis à jour pour accepter cette fonctionnalité (voir <code class="bg-slate-200 px-1 rounded">docs/API-ADMIN-CREER-POUR-PROPRIETAIRE.md</code>).
-    </div>
 
     <form @submit.prevent="submit" class="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 space-y-4 sm:space-y-6">
       <!-- Informations de base -->

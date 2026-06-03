@@ -514,8 +514,14 @@ const submit = () => {
   console.log('Envoi du formulaire :', form.data());
   form.put(`/owner/vehicles/${props.vehicle.id}`, {
     preserveScroll: true,
+    onSuccess: (page) => {
+      console.log('Succès:', page.props.flash);
+    },
     onError: (errors) => {
-      console.error('Erreurs formulaire :', errors);
+      console.error('Erreurs reçues du backend:', errors);
+    },
+    onFinish: () => {
+      console.log('Requête terminée. Processing:', form.processing);
     },
   });
 };

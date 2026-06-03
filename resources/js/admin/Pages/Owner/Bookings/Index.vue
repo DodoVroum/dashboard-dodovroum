@@ -676,12 +676,10 @@ const canConfirmBooking = (booking: { status?: string; ownerConfirmedAt?: string
 };
 
 const displayedBookings = computed(() => {
+  if (!Array.isArray(props.bookings)) return [];
   if (activeTab.value === 'active') {
-    // Filtre par defaut: dossiers actionnables (PAID) + deja traites (CONFIRMED).
     return props.bookings.filter((booking) => isPaidStatus(booking.status) || isConfirmedStatus(booking.status));
   }
-
-  // Archives/echouees : annulees, echecs et pending expirées.
   return props.bookings.filter((booking) => {
     return isCancelledOrFailedStatus(booking.status) || isExpiredPending(booking);
   });

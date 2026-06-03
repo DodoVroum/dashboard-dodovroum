@@ -459,14 +459,15 @@ const isExpiredStatus = (status?: string | null): boolean =>
 const hideExpired = ref(true);
 
 const expiredCount = computed(() =>
-  props.comboOffers.filter(o => isExpiredStatus(o.status)).length
+  Array.isArray(props.comboOffers) ? props.comboOffers.filter(o => isExpiredStatus(o.status)).length : 0
 );
 
-const visibleOffers = computed(() =>
-  hideExpired.value
+const visibleOffers = computed(() => {
+  if (!Array.isArray(props.comboOffers)) return [];
+  return hideExpired.value
     ? props.comboOffers.filter(o => !isExpiredStatus(o.status))
-    : props.comboOffers
-);
+    : props.comboOffers;
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 

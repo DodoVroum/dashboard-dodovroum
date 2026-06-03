@@ -335,7 +335,8 @@ class OwnerVehicleController extends Controller
 
         $allVehicles = $this->apiService->getVehicles($apiFilters);
 
-        // Filtrer par propriétaire (même double-vérification que index)
+        // L'API est déjà filtrée par proprietaireId + isActive=false.
+        // On ne rejette un véhicule que si son ownerId est présent ET ne correspond pas.
         $ownerVehicles = [];
         foreach ($allVehicles as $vehicle) {
             $vOwnerId = null;
@@ -352,20 +353,17 @@ class OwnerVehicleController extends Controller
                 $vOwnerId = $vehicle['proprietaire'];
             }
 
-            $matches = $vOwnerId && (
-                (string) $vOwnerId === (string) $proprietaireId
-                || (is_numeric($vOwnerId) && is_numeric($proprietaireId) && (int) $vOwnerId === (int) $proprietaireId)
-            );
-
-            if (!$matches) {
-                continue;
+            // Par défaut on fait confiance au filtre API ; on exclut seulement si l'ID est présent et ne correspond pas
+            if ($vOwnerId !== null && $vOwnerId !== '') {
+                $ownerMatch = (string) $vOwnerId === (string) $proprietaireId
+                    || (string) $vOwnerId === $userAuthId
+                    || (is_numeric($vOwnerId) && is_numeric($proprietaireId) && (int) $vOwnerId === (int) $proprietaireId);
+                if (!$ownerMatch) {
+                    continue;
+                }
             }
 
-            // Garder uniquement les inactifs
-            $isActive = $vehicle['isActive'] ?? true;
-            if ($isActive === false) {
-                $ownerVehicles[] = $vehicle;
-            }
+            $ownerVehicles[] = $vehicle;
         }
 
         $mapped = array_map(function ($v) {

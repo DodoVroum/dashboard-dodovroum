@@ -353,7 +353,7 @@ const form = useForm({
   typeResidence: '',
   address: '',
   city: '',
-  country: '',
+  country: "Côte d'Ivoire",
   pricePerNight: 0,
   bedrooms: 0,
   bathrooms: 0,

@@ -353,7 +353,7 @@
 </template>
 
 <script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
@@ -516,6 +516,7 @@ const submit = () => {
     preserveScroll: true,
     onSuccess: (page) => {
       console.log('Succès:', page.props.flash);
+      router.reload({ only: ['vehicle'] });
     },
     onError: (errors) => {
       console.error('Erreurs reçues du backend:', errors);

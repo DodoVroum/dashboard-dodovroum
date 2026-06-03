@@ -324,7 +324,7 @@
           </button>
         </form>
         <button
-          @click="confirmDelete"
+          @click="deleteResidence"
           class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
         >
           <Trash2 class="w-4 h-4" />
@@ -333,36 +333,6 @@
       </div>
     </section>
 
-    <!-- Modal de confirmation de suppression -->
-    <div
-      v-if="showDeleteModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showDeleteModal = false"
-    >
-      <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold mb-4">Confirmer la suppression</h3>
-        <p class="text-slate-600 mb-6">
-          Êtes-vous sûr de vouloir supprimer la résidence
-          <strong>{{ residence?.title || residence?.name }}</strong> ?
-          Cette action est irréversible.
-        </p>
-        <div class="flex justify-end gap-3">
-          <button
-            @click="showDeleteModal = false"
-            class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            @click.stop="deleteResidence"
-            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Modal d'image -->
     <div
@@ -479,7 +449,6 @@ const page = usePage();
 const csrfToken = () => (page.props as any).csrf_token as string;
 
 const showActionsMenu = ref(false);
-const showDeleteModal = ref(false);
 const selectedImage = ref<string | null>(null);
 const imageErrors = ref<Record<number, boolean>>({});
 
@@ -487,14 +456,9 @@ const toggleActionsMenu = () => {
   showActionsMenu.value = !showActionsMenu.value;
 };
 
-const confirmDelete = () => {
-  showDeleteModal.value = true;
-  showActionsMenu.value = false;
-};
-
 const deleteResidence = () => {
   if (!props.residence?.id) return;
-  showDeleteModal.value = false;
+  showActionsMenu.value = false;
   router.delete(`/owner/residences/${props.residence.id}`, {
     preserveScroll: true,
   });

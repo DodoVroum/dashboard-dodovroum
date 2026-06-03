@@ -240,7 +240,7 @@
                       <button
                         v-if="residence.canEdit !== false"
                         type="button"
-                        @click.stop.prevent="confirmDelete(residence)"
+                        @click.stop.prevent="deleteResidence(residence)"
                         class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                       >
                         <Trash2 class="w-4 h-4" />
@@ -274,39 +274,6 @@
       />
     </div>
 
-    <!-- Modal de confirmation de suppression (Teleport pour être au-dessus du menu) -->
-    <Teleport to="body">
-      <div
-        v-if="residenceToDelete"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
-        @click.self="tryCloseModal"
-      >
-        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl" @click.stop>
-          <h3 class="text-lg font-semibold mb-4">Confirmer la suppression</h3>
-          <p class="text-slate-600 mb-6">
-            Êtes-vous sûr de vouloir supprimer la résidence
-            <strong>{{ residenceToDelete.title || residenceToDelete.name || 'cette résidence' }}</strong> ?
-            Cette action est irréversible.
-          </p>
-          <div class="flex justify-end gap-3">
-            <button
-              type="button"
-              @click="residenceToDelete = null"
-              class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              @click.stop="deleteResidence"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Supprimer
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -384,8 +351,6 @@ const resetFilters = () => {
 };
 
 const openMenus = ref(new Set<string | number>());
-const residenceToDelete = ref<typeof props.residences[0] | null>(null);
-const modalCanClose = ref(false);
 const buttonRefs = ref<Map<string | number, HTMLElement>>(new Map());
 
 const goToResidence = (residence: (typeof props.residences)[0]) => {
@@ -466,31 +431,11 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 
-const confirmDelete = (residence: typeof props.residences[0]) => {
-  modalCanClose.value = false;
-  residenceToDelete.value = residence;
-  // Bloquer la fermeture immédiate pour éviter que le clic d'ouverture
-  // ne se propage à l'overlay et ne referme le modal aussitôt.
-  setTimeout(() => {
-    modalCanClose.value = true;
-    closeMenu(residence.id);
-  }, 200);
-};
-
-const tryCloseModal = () => {
-  if (modalCanClose.value) {
-    residenceToDelete.value = null;
-  }
-};
-
-const deleteResidence = () => {
-  if (!residenceToDelete.value?.id) return;
-  const url = `/owner/residences/${residenceToDelete.value.id}`;
-  router.delete(url, {
+const deleteResidence = (residence: typeof props.residences[0]) => {
+  if (!residence?.id) return;
+  closeMenu(residence.id);
+  router.delete(`/owner/residences/${residence.id}`, {
     preserveScroll: true,
-    onSuccess: () => { residenceToDelete.value = null; },
-    onError: () => { residenceToDelete.value = null; },
-    onFinish: () => { residenceToDelete.value = null; },
   });
 };
 

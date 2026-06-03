@@ -66,8 +66,14 @@
           <option value="">Tous les types</option>
           <option value="villa">Villa</option>
           <option value="appartement">Appartement</option>
-          <option value="maison">Maison</option>
           <option value="studio">Studio</option>
+          <option value="duplex">Duplex</option>
+          <option value="maison_basse">Maison basse</option>
+          <option value="chambre_meublee">Chambre meublée</option>
+          <option value="residence_hoteliere">Résidence hôtelière</option>
+          <option value="villa_avec_piscine">Villa avec piscine</option>
+          <option value="penthouse">Penthouse</option>
+          <option value="bungalow">Bungalow</option>
         </select>
         <select v-model="filters.status" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
           <option value="">Tous les statuts</option>
@@ -620,8 +626,14 @@ const formatType = (type: string): string => {
   const typeMap: Record<string, string> = {
     villa: 'Villa',
     appartement: 'Appartement',
-    maison: 'Maison',
     studio: 'Studio',
+    duplex: 'Duplex',
+    maison_basse: 'Maison basse',
+    chambre_meublee: 'Chambre meublée',
+    residence_hoteliere: 'Résidence hôtelière',
+    villa_avec_piscine: 'Villa avec piscine',
+    penthouse: 'Penthouse',
+    bungalow: 'Bungalow',
   };
   return typeMap[type?.toLowerCase()] || type || 'N/A';
 };

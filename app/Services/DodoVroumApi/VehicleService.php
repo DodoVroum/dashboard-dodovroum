@@ -110,24 +110,33 @@ class VehicleService extends BaseApiService
      */
     public function create(array $data, bool $isAdmin = false): array
     {
-        $dataForApi = VehicleMapper::toApi($data);
-        
-        // On s'assure une dernière fois que proprietaireId n'est pas dans le payload final
-        unset($dataForApi['proprietaireId']);
-        // NestJS assigne le propriétaire via JWT, ownerId ne doit pas être envoyé dans le body
-        unset($dataForApi['ownerId']);
+        // Récupérer le proprietaireId AVANT le mapping (toApi() ne le transmet pas)
+        $proprietaireId = $data['proprietaireId'] ?? null;
 
-        // On s'assure que les types numériques sont corrects
-        $dataForApi['year'] = (int) ($dataForApi['year'] ?? date('Y'));
+        $dataForApi = VehicleMapper::toApi($data);
+
+        // Toujours supprimer proprietaireId (NestJS ne connaît pas ce champ)
+        unset($dataForApi['proprietaireId']);
+
+        // Si un propriétaire est explicitement fourni (admin créant pour un owner),
+        // envoyer ownerId dans le body — NestJS l'accepte quand l'appelant est admin
+        if (!empty($proprietaireId)) {
+            $dataForApi['ownerId'] = (string) $proprietaireId;
+        } else {
+            // Aucun propriétaire fourni : NestJS utilisera le JWT bearer
+            unset($dataForApi['ownerId']);
+        }
+
+        $dataForApi['year']  = (int) ($dataForApi['year']  ?? date('Y'));
         $dataForApi['seats'] = (int) ($dataForApi['seats'] ?? 5);
 
         Log::info('Payload final création véhicule envoyé à NestJS', [
-            'payload' => $dataForApi,
-            'has_ownerId' => isset($dataForApi['ownerId']),
-            'ownerId' => $dataForApi['ownerId'] ?? null,
+            'has_ownerId'   => isset($dataForApi['ownerId']),
+            'ownerId'       => $dataForApi['ownerId'] ?? null,
+            'proprietaireId_source' => $proprietaireId,
         ]);
 
-        return $this->post('vehicles', $dataForApi, false);
+        return $this->post('vehicles', $dataForApi);
     }
 
     /**

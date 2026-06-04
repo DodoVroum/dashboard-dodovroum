@@ -19,7 +19,7 @@ class VehicleMapper
         $name = self::buildVehicleName($vehicle);
         
         return [
-            'id' => $vehicle['id'] ?? null,
+            'id' => $vehicle['id'] ?? $vehicle['_id'] ?? null,
             'name' => $name,
             'brand' => $vehicle['marque'] ?? $vehicle['brand'] ?? null,
             'marque' => $vehicle['marque'] ?? $vehicle['brand'] ?? null,

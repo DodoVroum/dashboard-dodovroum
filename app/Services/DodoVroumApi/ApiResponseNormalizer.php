@@ -106,13 +106,13 @@ class ApiResponseNormalizer
             if ($isNumericArray) {
                 // C'est un tableau de tableaux, on aplatit
                 foreach ($item as $subItem) {
-                    if (is_array($subItem) && isset($subItem['id'])) {
+                    if (is_array($subItem) && (isset($subItem['id']) || isset($subItem['_id']))) {
                         $flattened[] = $subItem;
                     }
                 }
             } else {
                 // C'est un objet/tableau associatif
-                if (isset($item['id'])) {
+                if (isset($item['id']) || isset($item['_id'])) {
                     $flattened[] = $item;
                 }
             }

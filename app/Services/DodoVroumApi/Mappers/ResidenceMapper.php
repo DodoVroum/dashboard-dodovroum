@@ -33,7 +33,7 @@ class ResidenceMapper
         }
 
         return [
-            'id' => $residence['id'] ?? null,
+            'id' => $residence['id'] ?? $residence['_id'] ?? null,
             'title' => $residence['nom'] ?? $residence['title'] ?? $residence['name'] ?? 'Résidence sans nom',
             'name' => $residence['nom'] ?? $residence['name'] ?? $residence['title'] ?? 'Résidence sans nom',
             'type' => $residence['typeResidence'] ?? $residence['type'] ?? null,

@@ -68,6 +68,8 @@ Route::middleware(['auth', 'admin'])
         Route::resource('vehicles', AdminVehicleController::class);
         Route::get('/vehicles/{id}/check-bookings', [AdminVehicleController::class, 'checkBookings'])->name('vehicles.check-bookings');
         // Route spécifique AVANT la route resource pour éviter les conflits
+        Route::get('/combo-offers/archives', [AdminComboOfferController::class, 'archived'])->name('combo-offers.archives');
+        Route::patch('/combo-offers/{id}/reactivate', [AdminComboOfferController::class, 'reactivate'])->name('combo-offers.reactivate');
         Route::get('/combo-offers/owner-properties', [AdminComboOfferController::class, 'getOwnerProperties'])->name('combo-offers.owner-properties');
         Route::get('/combo-offers/{id}/check-bookings', [AdminComboOfferController::class, 'checkBookings'])->name('combo-offers.check-bookings');
         Route::resource('combo-offers', AdminComboOfferController::class);
@@ -111,7 +113,9 @@ Route::middleware(['auth', 'owner'])
         Route::patch('/bookings/{id}/reject', [\App\Http\Controllers\Owner\OwnerBookingController::class, 'reject'])->name('bookings.reject');
         Route::patch('/bookings/{id}/confirm-checkout', [\App\Http\Controllers\Owner\OwnerBookingController::class, 'confirmCheckOut'])->name('bookings.confirm-checkout');
         Route::resource('bookings', \App\Http\Controllers\Owner\OwnerBookingController::class)->only(['index', 'show']);
-        // Avant le resource pour que "owner-properties" ne soit pas capturé comme {id}
+        // Avant le resource pour que "archived" et "owner-properties" ne soient pas capturés comme {id}
+        Route::get('/combo-offers/archived', [\App\Http\Controllers\Owner\OwnerComboOfferController::class, 'archived'])->name('combo-offers.archived');
+        Route::patch('/combo-offers/{id}/reactivate', [\App\Http\Controllers\Owner\OwnerComboOfferController::class, 'reactivate'])->name('combo-offers.reactivate');
         Route::get('/combo-offers/owner-properties', [\App\Http\Controllers\Owner\OwnerComboOfferController::class, 'getOwnerProperties'])->name('owner.combo-offers.owner-properties');
         Route::resource('combo-offers', \App\Http\Controllers\Owner\OwnerComboOfferController::class)->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::post('/images/upload', [ImageUploadController::class, 'upload'])->name('images.upload');

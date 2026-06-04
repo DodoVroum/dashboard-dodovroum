@@ -211,6 +211,7 @@ class AdminComboOfferController extends Controller
             
             // Calculer les statistiques AVANT la pagination
             $totalOffers = count($offers);
+            $archivedCount = count(array_filter($offers, fn($o) => !($o['isActive'] ?? true)));
             $confirmedBookings = 0;
             $totalBookings = 0;
             $monthRevenue = 0;
@@ -297,6 +298,7 @@ class AdminComboOfferController extends Controller
             'residences' => is_array($residences) ? array_slice($residences, 0, 100) : [],
             'vehicles' => is_array($vehicles) ? array_slice($vehicles, 0, 100) : [],
             'filters' => $filters ?? [],
+            'archivedCount' => $archivedCount ?? 0,
             'stats' => [
                 'totalOffers' => $totalOffers ?? 0,
                 'confirmedBookings' => $confirmedBookings ?? 0,
@@ -304,6 +306,84 @@ class AdminComboOfferController extends Controller
                 'conversionRate' => $conversionRate ?? 0,
             ],
         ]);
+    }
+
+    public function archived(Request $request): Response
+    {
+        try {
+            $allOffers = $this->apiService->getComboOffers([]);
+            if (!is_array($allOffers)) $allOffers = [];
+        } catch (\Exception $e) {
+            \Log::error('Erreur API offres archivées admin', ['error' => $e->getMessage()]);
+            return Inertia::render('ComboOffers/Archived', ['comboOffers' => [], 'error' => 'Erreur lors de la récupération des offres archivées.']);
+        }
+
+        $archived = array_filter($allOffers, fn($o) => !($o['isActive'] ?? $o['is_active'] ?? true));
+
+        $mapped = array_map(function ($offer) {
+            $title  = $offer['titre'] ?? $offer['title'] ?? 'Offre sans nom';
+            $price  = (float) ($offer['prixPack'] ?? $offer['price'] ?? 0);
+            $vehicle   = $offer['voiture'] ?? $offer['vehicle'] ?? null;
+            $residence = $offer['residence'] ?? null;
+
+            $proprietaireId = $offer['proprietaireId'] ?? $offer['ownerId']
+                ?? $residence['proprietaireId'] ?? $residence['ownerId']
+                ?? ($vehicle['proprietaireId'] ?? $vehicle['ownerId'] ?? null);
+
+            $ownerName = null;
+            try {
+                if ($proprietaireId) {
+                    $owner = $this->apiService->getUser((string) $proprietaireId);
+                    $firstName = $owner['firstName'] ?? $owner['prenom'] ?? '';
+                    $lastName  = $owner['lastName']  ?? $owner['nom']   ?? $owner['name'] ?? '';
+                    $ownerName = trim($firstName . ' ' . $lastName) ?: ($owner['email'] ?? null);
+                }
+            } catch (\Exception $e) { /* inconnu */ }
+
+            return [
+                'id'            => $offer['id'] ?? null,
+                'title'         => $title,
+                'residenceName' => $residence['nom'] ?? $residence['name'] ?? $residence['title'] ?? '—',
+                'vehicleName'   => $vehicle ? (($vehicle['marque'] ?? '') . ' ' . ($vehicle['modele'] ?? $vehicle['name'] ?? '')) : '—',
+                'price'         => $price,
+                'ownerName'     => $ownerName,
+                'isActive'      => false,
+            ];
+        }, array_values($archived));
+
+        $perPage     = $request->get('per_page', 15);
+        $currentPage = $request->get('page', 1);
+        $collection  = collect($mapped);
+        $paginated   = new \Illuminate\Pagination\LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(), $perPage, $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return Inertia::render('ComboOffers/Archived', [
+            'comboOffers' => $paginated->items(),
+            'pagination'  => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ],
+        ]);
+    }
+
+    public function reactivate(string $id): RedirectResponse
+    {
+        try {
+            $this->apiService->updateComboOffer($id, ['isActive' => true]);
+            return redirect()->route('admin.combo-offers.index')
+                ->with('success', 'Offre réactivée avec succès.');
+        } catch (\Exception $e) {
+            \Log::error('Erreur réactivation offre admin', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('admin.combo-offers.archives')
+                ->with('error', 'Erreur lors de la réactivation : ' . $e->getMessage());
+        }
     }
 
     /**

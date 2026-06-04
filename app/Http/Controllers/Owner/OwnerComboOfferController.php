@@ -141,9 +141,13 @@ class OwnerComboOfferController extends Controller
             
             $currentMonth = date('Y-m');
             
+            $archivedCount = 0;
             foreach ($offers as $offer) {
-                if (($offer['isActive'] ?? $offer['is_active'] ?? $offer['available'] ?? true) === true) {
+                $isActive = $offer['isActive'] ?? $offer['is_active'] ?? $offer['available'] ?? true;
+                if ($isActive === true) {
                     $activeOffers++;
+                } elseif ($isActive === false) {
+                    $archivedCount++;
                 }
             }
             
@@ -283,6 +287,7 @@ class OwnerComboOfferController extends Controller
                     'to' => $paginated->lastItem(),
                 ],
                 'filters' => $filters,
+                'archivedCount' => $archivedCount ?? 0,
                 'stats' => [
                     'totalOffers' => $totalOffers,
                     'activeOffers' => $activeOffers,
@@ -302,6 +307,88 @@ class OwnerComboOfferController extends Controller
                 'filters' => $filters ?? [],
                 'error' => 'Erreur lors de la récupération des offres combinées.',
             ]);
+        }
+    }
+
+    public function archived(Request $request): Response
+    {
+        $user = Auth::user();
+        if (!$user) abort(403, 'Non authentifié');
+
+        $proprietaireId = $this->getProprietaireId($user);
+
+        try {
+            $allOffers = $this->offerService->all([]);
+        } catch (\Exception $e) {
+            Log::error('Erreur API offres archivées owner', ['error' => $e->getMessage()]);
+            return Inertia::render('Owner/ComboOffers/Archived', ['comboOffers' => [], 'error' => 'Erreur lors de la récupération des offres archivées.']);
+        }
+
+        $archived = array_filter($allOffers, function ($offer) use ($proprietaireId) {
+            $isActive = $offer['isActive'] ?? $offer['is_active'] ?? $offer['available'] ?? true;
+            if ($isActive !== false) return false;
+
+            // Filtre propriétaire
+            $offerOwner = $offer['proprietaireId'] ?? $offer['ownerId']
+                ?? $offer['residence']['proprietaireId'] ?? $offer['residence']['ownerId']
+                ?? ($offer['voiture']['proprietaireId'] ?? $offer['voiture']['ownerId']
+                ?? ($offer['vehicle']['proprietaireId'] ?? $offer['vehicle']['ownerId'] ?? null));
+
+            if (!$offerOwner) return true;
+            return (string) $offerOwner === (string) $proprietaireId;
+        });
+
+        $mapped = array_map(function ($offer) {
+            $title    = $offer['titre'] ?? $offer['title'] ?? 'Offre sans nom';
+            $price    = (float) ($offer['prixPack'] ?? $offer['price'] ?? 0);
+            $vehicle  = $offer['voiture'] ?? $offer['vehicle'] ?? null;
+            $residence = $offer['residence'] ?? null;
+
+            return [
+                'id'            => $offer['id'] ?? $offer['_id'] ?? null,
+                'title'         => $title,
+                'residenceName' => $residence['nom'] ?? $residence['name'] ?? $residence['title'] ?? '—',
+                'vehicleName'   => $vehicle ? trim(($vehicle['marque'] ?? '') . ' ' . ($vehicle['modele'] ?? $vehicle['name'] ?? '')) : '—',
+                'price'         => $price,
+                'isActive'      => false,
+            ];
+        }, array_values($archived));
+
+        $perPage     = $request->get('per_page', 15);
+        $currentPage = $request->get('page', 1);
+        $collection  = collect($mapped);
+        $paginated   = new LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(), $perPage, $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return Inertia::render('Owner/ComboOffers/Archived', [
+            'comboOffers' => $paginated->items(),
+            'pagination'  => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ],
+        ]);
+    }
+
+    public function reactivate(string $id): RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$user) abort(403, 'Non authentifié');
+
+        try {
+            $this->apiService->updateComboOffer($id, ['isActive' => true]);
+            return redirect()->route('owner.combo-offers.index')
+                ->with('success', 'Offre réactivée avec succès.');
+        } catch (\Exception $e) {
+            Log::error('Erreur réactivation offre owner', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('owner.combo-offers.archived')
+                ->with('error', 'Erreur lors de la réactivation : ' . $e->getMessage());
         }
     }
 

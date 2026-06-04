@@ -64,12 +64,6 @@ class VehicleService extends BaseApiService
             $vehicle = null;
         }
 
-        Log::debug('VehicleService::find - résultat GET direct', [
-            'vehicle_id'  => $id,
-            'is_empty'    => empty($vehicle),
-            'keys'        => is_array($vehicle) ? array_keys($vehicle) : gettype($vehicle),
-        ]);
-
         // Fallback : chercher dans la liste complète si le GET direct échoue
         if (empty($vehicle)) {
             $user = \Illuminate\Support\Facades\Auth::user();
@@ -81,10 +75,6 @@ class VehicleService extends BaseApiService
                 $filters = ['proprietaireId' => (string) $user->getAuthIdentifier()];
             }
 
-            Log::warning('VehicleService::find - fallback liste', [
-                'vehicle_id' => $id,
-                'filters'    => $filters,
-            ]);
 
             foreach ($this->all($filters) as $v) {
                 $vehicleId = $v['id'] ?? $v['_id'] ?? null;

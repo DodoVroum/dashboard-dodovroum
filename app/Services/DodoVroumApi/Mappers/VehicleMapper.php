@@ -30,14 +30,6 @@ class VehicleMapper
             }
         }
 
-        \Illuminate\Support\Facades\Log::debug('VehicleMapper::fromApi - clés reçues', [
-            'keys'  => array_keys($vehicle),
-            'id'    => $vehicle['id']    ?? $vehicle['_id'] ?? 'ABSENT',
-            'brand' => $vehicle['brand'] ?? $vehicle['marque'] ?? 'ABSENT',
-            'model' => $vehicle['model'] ?? $vehicle['modele'] ?? 'ABSENT',
-            'year'  => $vehicle['year']  ?? $vehicle['annee'] ?? 'ABSENT',
-        ]);
-
         // Inférer le type de véhicule
         $type = self::inferVehicleType($vehicle);
         

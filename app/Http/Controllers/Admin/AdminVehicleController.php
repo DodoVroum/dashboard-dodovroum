@@ -103,9 +103,13 @@ class AdminVehicleController extends Controller
             
             $currentMonth = date('Y-m');
             
+            $archivedCount = 0;
             foreach ($allVehiclesRaw as $vehicle) {
-                if (($vehicle['available'] ?? $vehicle['isActive'] ?? true) === true) {
+                $isActive = $vehicle['available'] ?? $vehicle['isActive'] ?? true;
+                if ($isActive === true) {
                     $availableVehicles++;
+                } elseif ($isActive === false) {
+                    $archivedCount++;
                 }
             }
             
@@ -195,6 +199,7 @@ class AdminVehicleController extends Controller
             ],
             'filters' => $filters ?? [],
             'vehicleTypes' => $vehicleTypes,
+            'archivedCount' => $archivedCount ?? 0,
             'stats' => [
                 'totalVehicles' => $totalVehicles ?? 0,
                 'availableVehicles' => $availableVehicles ?? 0,
@@ -202,6 +207,81 @@ class AdminVehicleController extends Controller
                 'monthRevenue' => $monthRevenue ?? 0,
             ],
         ]);
+    }
+
+    public function archived(Request $request): Response
+    {
+        try {
+            $allVehicles = $this->apiService->getVehicles(['isActive' => 'false']);
+        } catch (\Exception $e) {
+            Log::error('Erreur API véhicules archivés admin', ['error' => $e->getMessage()]);
+            return Inertia::render('Vehicles/Archived', [
+                'vehicles' => [],
+                'error' => 'Erreur lors de la récupération des véhicules archivés.',
+            ]);
+        }
+
+        $archived = array_filter($allVehicles, function ($vehicle) {
+            $isActive = $vehicle['isActive'] ?? $vehicle['available'] ?? true;
+            return !$isActive;
+        });
+
+        $mapped = array_map(function ($v) {
+            $mapped = \App\Services\DodoVroumApi\Mappers\VehicleMapper::fromApi($v);
+
+            $proprietaireId = $v['proprietaireId'] ?? $v['proprietaire']['id'] ?? $v['ownerId'] ?? null;
+            $mapped['proprietaireId'] = $proprietaireId;
+
+            try {
+                if ($proprietaireId) {
+                    $owner = $this->userService->find((string) $proprietaireId);
+                    $firstName = $owner['firstName'] ?? $owner['prenom'] ?? '';
+                    $lastName  = $owner['lastName']  ?? $owner['nom']   ?? $owner['name'] ?? '';
+                    $fullName  = trim($firstName . ' ' . $lastName) ?: ($owner['email'] ?? null);
+                    $mapped['ownerName'] = $fullName;
+                }
+            } catch (\Exception $e) {
+                // Propriétaire inconnu — on continue
+            }
+
+            return $mapped;
+        }, array_values($archived));
+
+        $perPage     = $request->get('per_page', 15);
+        $currentPage = $request->get('page', 1);
+        $collection  = collect($mapped);
+        $paginated   = new \Illuminate\Pagination\LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return Inertia::render('Vehicles/Archived', [
+            'vehicles' => $paginated->items(),
+            'pagination' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ],
+        ]);
+    }
+
+    public function reactivate(string $id): RedirectResponse
+    {
+        try {
+            $this->apiService->updateVehicle($id, ['isActive' => true]);
+            return redirect()->route('admin.vehicles.index')
+                ->with('success', 'Véhicule réactivé avec succès.');
+        } catch (\Exception $e) {
+            Log::error('Erreur réactivation véhicule admin', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('admin.vehicles.archives')
+                ->with('error', 'Erreur lors de la réactivation : ' . $e->getMessage());
+        }
     }
 
     /**

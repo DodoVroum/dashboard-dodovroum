@@ -5,13 +5,23 @@
         <h1 class="text-xl sm:text-2xl font-bold text-slate-900 truncate">Véhicules</h1>
         <p class="text-sm text-slate-500 mt-1 truncate">Gérer votre flotte de véhicules</p>
       </div>
-      <Link
-        :href="route('admin.vehicles.create')"
-        class="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap w-full sm:w-auto shrink-0"
-      >
-        <span aria-hidden="true">+</span>
-        <span><span class="sm:hidden">Ajouter</span><span class="hidden sm:inline">Ajouter un véhicule</span></span>
-      </Link>
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <a
+          href="/admin/vehicles/archives"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shrink-0"
+        >
+          <Archive class="w-4 h-4" />
+          Archivés
+          <span v-if="archivedCount && archivedCount > 0" class="bg-slate-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">{{ archivedCount }}</span>
+        </a>
+        <Link
+          :href="route('admin.vehicles.create')"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap flex-1 sm:flex-none shrink-0"
+        >
+          <span aria-hidden="true">+</span>
+          <span><span class="sm:hidden">Ajouter</span><span class="hidden sm:inline">Ajouter un véhicule</span></span>
+        </Link>
+      </div>
     </div>
 
     <!-- Messages de succès/erreur -->
@@ -317,7 +327,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue';
 import { Teleport } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { Truck, Car, Bike, Calendar, DollarSign, CheckCircle } from 'lucide-vue-next';
+import { Truck, Car, Bike, Calendar, DollarSign, CheckCircle, Archive } from 'lucide-vue-next';
 import Pagination from '../../Components/Pagination.vue';
 import AdminLayout from '../../Components/Layouts/AdminLayout.vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
@@ -357,6 +367,7 @@ const props = defineProps<{
     to: number | null;
   } | null;
   vehicleTypes?: Array<{ value: string; label: string }>;
+  archivedCount?: number;
   stats?: {
     totalVehicles: number;
     availableVehicles: number;

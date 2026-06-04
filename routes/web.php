@@ -63,6 +63,8 @@ Route::middleware(['auth', 'admin'])
         Route::patch('/residences/{id}/reactivate', [AdminResidenceController::class, 'reactivate'])->name('residences.reactivate');
         Route::resource('residences', AdminResidenceController::class);
         Route::get('/residences/{id}/check-bookings', [AdminResidenceController::class, 'checkBookings'])->name('residences.check-bookings');
+        Route::get('/vehicles/archives', [AdminVehicleController::class, 'archived'])->name('vehicles.archives');
+        Route::patch('/vehicles/{id}/reactivate', [AdminVehicleController::class, 'reactivate'])->name('vehicles.reactivate');
         Route::resource('vehicles', AdminVehicleController::class);
         Route::get('/vehicles/{id}/check-bookings', [AdminVehicleController::class, 'checkBookings'])->name('vehicles.check-bookings');
         // Route spécifique AVANT la route resource pour éviter les conflits

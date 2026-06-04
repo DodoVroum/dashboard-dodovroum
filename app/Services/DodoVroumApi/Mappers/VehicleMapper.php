@@ -16,6 +16,28 @@ class VehicleMapper
                 : (array) $vehicle;
         }
 
+        // Si get() a retourné une liste [vehicle] au lieu de vehicle directement, extraire le premier élément
+        if (isset($vehicle[0]) && is_array($vehicle[0]) && (isset($vehicle[0]['id']) || isset($vehicle[0]['_id']))) {
+            $vehicle = $vehicle[0];
+        }
+
+        // Si les données sont encore enveloppées dans une clé 'data'
+        if (isset($vehicle['data']) && is_array($vehicle['data']) && !isset($vehicle['id']) && !isset($vehicle['_id'])) {
+            $vehicle = $vehicle['data'];
+            // Si data est lui-même une liste
+            if (isset($vehicle[0]) && is_array($vehicle[0])) {
+                $vehicle = $vehicle[0];
+            }
+        }
+
+        \Illuminate\Support\Facades\Log::debug('VehicleMapper::fromApi - clés reçues', [
+            'keys'  => array_keys($vehicle),
+            'id'    => $vehicle['id']    ?? $vehicle['_id'] ?? 'ABSENT',
+            'brand' => $vehicle['brand'] ?? $vehicle['marque'] ?? 'ABSENT',
+            'model' => $vehicle['model'] ?? $vehicle['modele'] ?? 'ABSENT',
+            'year'  => $vehicle['year']  ?? $vehicle['annee'] ?? 'ABSENT',
+        ]);
+
         // Inférer le type de véhicule
         $type = self::inferVehicleType($vehicle);
         

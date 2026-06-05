@@ -110,6 +110,12 @@ class VehicleService extends BaseApiService
      */
     public function create(array $data, bool $isAdmin = false): array
     {
+        Log::info('[VehicleService::create] $data reçu', [
+            'data_keys'      => array_keys($data),
+            'proprietaireId' => $data['proprietaireId'] ?? 'ABSENT',
+            'ownerId'        => $data['ownerId']        ?? 'ABSENT',
+        ]);
+
         // Accepter proprietaireId ou ownerId (le frontend peut envoyer l'un ou l'autre)
         $proprietaireId = $data['proprietaireId'] ?? $data['ownerId'] ?? null;
 

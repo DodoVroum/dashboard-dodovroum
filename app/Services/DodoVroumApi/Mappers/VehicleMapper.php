@@ -467,6 +467,10 @@ class VehicleMapper
                 : [],
             // 🛡️ Cast booléen strict pour isActive/isVerified
             'isActive' => $toBoolean($data['isActive'] ?? $data['is_active'] ?? $data['isVerified'] ?? $data['is_verified'] ?? true),
+            // Propriétaire — géré ici ET dans VehicleService::create() pour double garantie
+            'ownerId' => !empty($data['proprietaireId'] ?? $data['ownerId'] ?? null)
+                ? (string) ($data['proprietaireId'] ?? $data['ownerId'])
+                : null,
         ];
         
         // Supprimer les champs obsolètes qui ne doivent pas être envoyés à l'API

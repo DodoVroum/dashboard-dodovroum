@@ -110,23 +110,21 @@ class VehicleService extends BaseApiService
      */
     public function create(array $data, bool $isAdmin = false): array
     {
-        // Récupérer l'ID propriétaire AVANT le mapping
+        // 1. Extraire l'ID propriétaire avant tout mapping
         $ownerId = $data['proprietaireId'] ?? $data['ownerId'] ?? null;
 
-        // Mapper les champs vers le format NestJS
+        // 2. Mapper les données vers le format NestJS
         $dataForApi = VehicleMapper::toApi($data);
 
-        // Supprimer les clés d'ownership du mapper (NestJS les attend via ownerId uniquement)
-        unset($dataForApi['proprietaireId'], $dataForApi['ownerId']);
+        // 3. Forcer ownerId directement dans le payload final
+        $dataForApi['ownerId'] = !empty($ownerId) ? (string) $ownerId : null;
 
-        // Cast des types numériques
+        // 4. Nettoyage : proprietaireId n'est pas un champ NestJS
+        unset($dataForApi['proprietaireId']);
+
+        // 5. Cast des types numériques
         $dataForApi['year']  = (int) ($dataForApi['year']  ?? date('Y'));
         $dataForApi['seats'] = (int) ($dataForApi['seats'] ?? 5);
-
-        // Injecter ownerId en dernier pour garantir qu'il ne soit pas écrasé
-        if (!empty($ownerId)) {
-            $dataForApi['ownerId'] = (string) $ownerId;
-        }
 
         return $this->post('vehicles', $dataForApi);
     }

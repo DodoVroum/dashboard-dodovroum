@@ -139,19 +139,10 @@ class LoginController extends Controller
      */
     public function destroy(Request $request)
     {
-        // Nettoyer la session API
-        Session::forget('api_user');
-        Session::forget('api_token');
-        Session::forget('nest_jwt_token');
-
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Demander au frontend de vider le stockage local (remember me)
-        $request->session()->flash('clear_auth_storage', true);
-
-        return redirect()->route('login');
+        return redirect()->route('login')->with('clear_auth_storage', true);
     }
 }

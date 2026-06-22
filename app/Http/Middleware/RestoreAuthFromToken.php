@@ -18,6 +18,10 @@ class RestoreAuthFromToken
      */
     public function handle(Request $request, Closure $next)
     {
+        if ($request->routeIs('login', 'logout', 'auth.restore')) {
+            return $next($request);
+        }
+
         if (Auth::check()) {
             return $next($request);
         }

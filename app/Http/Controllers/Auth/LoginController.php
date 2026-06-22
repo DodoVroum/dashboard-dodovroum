@@ -59,7 +59,7 @@ class LoginController extends Controller
 
         // 1. On connecte d'abord l'utilisateur
         $user = new \App\Models\ApiUser($userData);
-        Auth::login($user, $request->boolean('remember'));
+        Auth::login($user);
 
         // 2. ON RÉGÉNÈRE LA SESSION ICI (Avant de stocker le token)
         $request->session()->regenerate();

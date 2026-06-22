@@ -330,6 +330,40 @@ class ApiAuthService
     }
 
     /**
+     * Décoder un token JWT et vérifier qu'il n'est pas expiré (usage public)
+     * Retourne les données utilisateur extraites du payload, ou null si invalide/expiré.
+     */
+    public function decodeAndValidateToken(string $token): ?array
+    {
+        try {
+            $parts = explode('.', $token);
+            if (count($parts) !== 3) {
+                return null;
+            }
+
+            $payload = $parts[1];
+            $padding = strlen($payload) % 4;
+            if ($padding !== 0) {
+                $payload .= str_repeat('=', 4 - $padding);
+            }
+
+            $decoded = json_decode(base64_decode($payload, true), true);
+            if (!is_array($decoded)) {
+                return null;
+            }
+
+            // Vérifier l'expiration (claim 'exp' en secondes Unix)
+            if (isset($decoded['exp']) && $decoded['exp'] < time()) {
+                return null;
+            }
+
+            return $this->decodeJwtToken($token);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
      * Vérifier si un token est valide
      */
     public function validateToken(string $token): bool

@@ -44,6 +44,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'destroy'])->name('logout')->middleware('auth');
+Route::post('/auth/restore', [\App\Http\Controllers\Auth\LoginController::class, 'restore'])->name('auth.restore')->middleware('guest');
 
 // Route pour le profil (accessible à tous les utilisateurs authentifiés)
 Route::middleware('auth')->group(function () {

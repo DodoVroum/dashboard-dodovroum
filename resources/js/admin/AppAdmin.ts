@@ -3,6 +3,25 @@ import { createInertiaApp } from '@inertiajs/vue3';
 import { createApp, h } from 'vue';
 import AdminLayout from './Components/Layouts/AdminLayout.vue';
 import VueApexCharts from 'vue3-apexcharts';
+import axios from 'axios';
+
+// Restaurer le token depuis le stockage (remember me) et l'attacher à toutes les requêtes Inertia/axios.
+// localStorage → remember=true (survit à la fermeture du navigateur)
+// sessionStorage → remember=false (valable uniquement pour l'onglet courant)
+(function restoreAuthToken() {
+    try {
+        const raw = localStorage.getItem('dvr_auth') || sessionStorage.getItem('dvr_auth');
+        if (raw) {
+            const auth = JSON.parse(raw);
+            if (auth?.token) {
+                axios.defaults.headers.common['X-Api-Token'] = auth.token;
+            }
+        }
+    } catch {
+        localStorage.removeItem('dvr_auth');
+        sessionStorage.removeItem('dvr_auth');
+    }
+})();
 
 createInertiaApp({
     resolve: (name) => {

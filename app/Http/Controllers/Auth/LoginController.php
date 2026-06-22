@@ -74,6 +74,15 @@ class LoginController extends Controller
             // On force la sauvegarde pour être sûr que le driver écrive sur le disque
             $request->session()->save();
 
+            // Flasher le token pour que le frontend puisse le stocker (localStorage/sessionStorage)
+            $request->session()->flash('flash_token', $userData['token']);
+            $request->session()->flash('flash_user', json_encode([
+                'id'    => $userData['id'] ?? null,
+                'email' => $userData['email'] ?? null,
+                'role'  => $userData['role'] ?? null,
+                'name'  => $userData['name'] ?? null,
+            ]));
+
             // Validation post-login
             \Illuminate\Support\Facades\Log::info('Vérification Session Finale', [
                 'session_id' => $request->session()->getId(),
@@ -93,6 +102,39 @@ class LoginController extends Controller
     }
 
     /**
+     * Restaurer la session depuis un token JWT stocké côté client (remember me)
+     */
+    public function restore(Request $request)
+    {
+        $token = $request->input('token');
+        if (!$token) {
+            return back()->withErrors(['token' => 'Token manquant.']);
+        }
+
+        $userData = $this->apiAuthService->decodeAndValidateToken($token);
+        if (!$userData) {
+            return back()->withErrors(['token' => 'Session expirée, veuillez vous reconnecter.']);
+        }
+
+        $fullUserData = array_merge($userData, ['token' => $token]);
+        $user = new \App\Models\ApiUser($fullUserData);
+        Auth::login($user);
+
+        $request->session()->regenerate();
+        $request->session()->put('api_token', $token);
+        $request->session()->put('nest_jwt_token', $token);
+        $request->session()->put('api_user', $fullUserData);
+        $request->session()->save();
+
+        $role = $userData['role'] ?? 'owner';
+        if ($role === 'admin' || (method_exists($user, 'isAdmin') && $user->isAdmin())) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        return redirect()->intended(route('owner.dashboard'));
+    }
+
+    /**
      * Déconnexion
      */
     public function destroy(Request $request)
@@ -101,11 +143,14 @@ class LoginController extends Controller
         Session::forget('api_user');
         Session::forget('api_token');
         Session::forget('nest_jwt_token');
-        
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // Demander au frontend de vider le stockage local (remember me)
+        $request->session()->flash('clear_auth_storage', true);
 
         return redirect()->route('login');
     }

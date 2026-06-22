@@ -118,6 +118,12 @@
           <p class="card-sub">Accédez à votre espace de gestion</p>
         </header>
 
+        <!-- Restauration en cours (remember me) -->
+        <div v-if="isRestoring" class="restoring">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="45"/></svg>
+          Restauration de la session…
+        </div>
+
         <!-- Bannière d'erreur globale -->
         <transition name="shake">
           <div v-if="globalError" class="err-banner" role="alert">
@@ -230,25 +236,85 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage, router } from '@inertiajs/vue3';
+import axios from 'axios';
 import AuthLayout from '../Components/Layouts/AuthLayout.vue';
 import logoUrl from '../assets/logo.png';
 
 defineOptions({ layout: AuthLayout });
 
-const form    = useForm({ email: '', password: '', remember: false });
-const showPwd = ref(false);
-const focused = ref<string | null>(null);
-const mounted = ref(false);
+const form         = useForm({ email: '', password: '', remember: false });
+const showPwd      = ref(false);
+const focused      = ref<string | null>(null);
+const mounted      = ref(false);
+const isRestoring  = ref(false);
 
-/* Affiche la bannière uniquement pour erreur d'authentification globale */
 const globalError = computed(() =>
   form.errors.email && !form.email.trim() ? form.errors.email : null
 );
 
-onMounted(() => setTimeout(() => { mounted.value = true; }, 60));
+onMounted(() => {
+    setTimeout(() => { mounted.value = true; }, 60);
 
-const submit = () => form.post('/login', { onFinish: () => form.reset('password') });
+    const flash = (usePage().props as any).flash ?? {};
+
+    // Logout : le backend demande de vider le stockage
+    if (flash.clearAuthStorage) {
+        localStorage.removeItem('dvr_auth');
+        sessionStorage.removeItem('dvr_auth');
+        delete axios.defaults.headers.common['X-Api-Token'];
+        return;
+    }
+
+    // Tentative de restauration silencieuse depuis localStorage (remember me)
+    try {
+        const raw = localStorage.getItem('dvr_auth');
+        if (raw) {
+            const auth = JSON.parse(raw);
+            if (auth?.token) {
+                isRestoring.value = true;
+                router.post('/auth/restore', { token: auth.token }, {
+                    onSuccess: () => { /* le backend redirige vers le dashboard */ },
+                    onError: () => {
+                        // Token expiré ou invalide → on vide
+                        localStorage.removeItem('dvr_auth');
+                        delete axios.defaults.headers.common['X-Api-Token'];
+                    },
+                    onFinish: () => { isRestoring.value = false; },
+                });
+            }
+        }
+    } catch {
+        localStorage.removeItem('dvr_auth');
+    }
+});
+
+const submit = () => form.post('/login', {
+    onSuccess: (page) => {
+        const flash = (page.props as any).flash ?? {};
+        const token = flash.token as string | undefined;
+
+        if (token) {
+            const authData = JSON.stringify({
+                token,
+                user: (() => { try { return JSON.parse(flash.user ?? 'null'); } catch { return null; } })(),
+            });
+
+            if (form.remember) {
+                localStorage.setItem('dvr_auth', authData);
+                sessionStorage.removeItem('dvr_auth');
+            } else {
+                sessionStorage.setItem('dvr_auth', authData);
+                localStorage.removeItem('dvr_auth');
+            }
+
+            // Mettre à jour le header axios pour les requêtes suivantes
+            axios.defaults.headers.common['X-Api-Token'] = token;
+        }
+
+        form.reset('password');
+    },
+});
 </script>
 
 <style scoped>
@@ -830,6 +896,24 @@ const submit = () => form.post('/login', { onFinish: () => form.reset('password'
   stroke: white;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Restauration session */
+.restoring {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 14px;
+  color: rgba(255,255,255,.6);
+  font-size: .875rem;
+  margin-bottom: 12px;
+}
+.restoring svg {
+  width: 18px; height: 18px;
+  animation: spin .7s linear infinite;
+  stroke: rgba(249,115,22,.9);
+  flex-shrink: 0;
+}
 
 /* Footer */
 .card-footer {

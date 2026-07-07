@@ -383,18 +383,34 @@ class OwnerResidenceController extends Controller
             }
             
             // Récupérer les réservations liées à cette résidence
-            $allBookings = $this->apiService->getBookings(['proprietaireId' => $proprietaireId]);
-            $residenceBookings = [];
-            foreach ($allBookings as $booking) {
-                $bookingResidenceId = null;
-                if (isset($booking['residence']) && is_array($booking['residence'])) {
-                    $bookingResidenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
-                } else {
-                    $bookingResidenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
-                }
-                
-                if ($bookingResidenceId && (string) $bookingResidenceId === (string) $id) {
-                    $residenceBookings[] = $booking;
+            // Essayer d'abord avec un filtre côté API
+            $residenceBookings = $this->apiService->getBookings(['residenceId' => $id]);
+
+            // Fallback : filtrer les réservations du propriétaire côté client
+            if (empty($residenceBookings) && $proprietaireId) {
+                $allBookings = $this->apiService->getBookings(['proprietaireId' => $proprietaireId]);
+                foreach ($allBookings as $booking) {
+                    $bookingResidenceId = null;
+
+                    if (isset($booking['residence']) && is_array($booking['residence'])) {
+                        $bookingResidenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
+                    }
+
+                    if (!$bookingResidenceId) {
+                        $bookingResidenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
+                    }
+
+                    if (!$bookingResidenceId && isset($booking['offer']) && is_array($booking['offer'])) {
+                        $offer = $booking['offer'];
+                        $bookingResidenceId = $offer['residenceId'] ?? $offer['residence_id'] ?? null;
+                        if (!$bookingResidenceId && isset($offer['residence']) && is_array($offer['residence'])) {
+                            $bookingResidenceId = $offer['residence']['id'] ?? $offer['residence']['_id'] ?? null;
+                        }
+                    }
+
+                    if ($bookingResidenceId && (string) $bookingResidenceId === (string) $id) {
+                        $residenceBookings[] = $booking;
+                    }
                 }
             }
 

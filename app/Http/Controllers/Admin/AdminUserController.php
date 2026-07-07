@@ -403,8 +403,7 @@ class AdminUserController extends Controller
                 'firstName' => $validated['firstName'],
                 'lastName' => $validated['lastName'],
                 'email' => $validated['email'],
-                'password' => $validated['password'], // ENVOI SANS HASHAGE
-                'role' => $apiRole,
+                'password' => $validated['password'],
             ];
 
             if (!empty($validated['phone'] ?? '')) {
@@ -432,6 +431,19 @@ class AdminUserController extends Controller
 
             if (!$result || (is_array($result) && empty($result))) {
                 return back()->with('error', 'L\'API n\'a pas renvoyé de données. Vérifiez les logs ou que l\'endpoint POST /users existe.')->withInput();
+            }
+
+            // Assigner le rôle via PATCH /users/:id/role si différent de CLIENT
+            if ($apiRole !== 'CLIENT' && !empty($result['id'])) {
+                try {
+                    $this->apiService->updateUserRole($result['id'], $apiRole);
+                } catch (\Exception $e) {
+                    Log::warning('Impossible d\'assigner le rôle après création', [
+                        'user_id' => $result['id'],
+                        'role' => $apiRole,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return redirect()->route('admin.users.index')->with('success', 'Utilisateur créé avec succès');
@@ -469,15 +481,16 @@ class AdminUserController extends Controller
             ]);
 
             $apiData = array_filter($request->only(['firstName', 'lastName', 'email', 'phone']));
-            
+
             if ($request->filled('password')) {
-                $apiData['password'] = $request->password; // ENVOI SANS HASHAGE
-            }
-            if ($request->filled('role')) {
-                $apiData['role'] = strtoupper($request->role);
+                $apiData['password'] = $request->password;
             }
 
             $this->apiService->updateUser($id, $apiData);
+
+            if ($request->filled('role')) {
+                $this->apiService->updateUserRole($id, strtoupper($request->role));
+            }
             return redirect()->route('admin.users.show', $id)->with('success', 'Profil mis à jour.');
         } catch (\Exception $e) {
             return back()->with('error', 'Erreur lors de la mise à jour.');

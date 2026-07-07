@@ -2147,6 +2147,15 @@ class DodoVroumApiService
     }
 
     /**
+     * Mettre à jour le rôle d'un utilisateur
+     * Endpoint: PATCH /api/users/:id/role
+     */
+    public function updateUserRole(string $id, string $role): array
+    {
+        return $this->patch("users/{$id}/role", ['role' => $role]);
+    }
+
+    /**
      * Supprimer un utilisateur
      * Endpoint: DELETE /api/users/:id
      */

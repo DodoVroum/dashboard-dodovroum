@@ -1603,11 +1603,28 @@ class AdminComboOfferController extends Controller
                 }
                 
                 if ($bookingOfferId && (string) $bookingOfferId === (string) $id) {
-                    // Ignorer les réservations annulées ou terminées : elles ne bloquent pas la suppression
+                    // Ignorer les réservations annulées, refusées ou terminées : elles ne bloquent pas la suppression
                     $status = strtolower($booking['status'] ?? '');
-                    if (in_array($status, ['cancelled', 'annulee', 'annulée', 'completed', 'terminee', 'terminée'], true)) {
+                    if (in_array($status, ['cancelled', 'annulee', 'annulée', 'completed', 'terminee', 'terminée', 'refused', 'refusee', 'refusée', 'expired', 'expiree', 'expirée'], true)) {
                         continue;
                     }
+
+                    // Ignorer aussi les réservations dont le séjour est déjà passé, même si l'API
+                    // n'a jamais fait transiter leur statut brut vers un état terminal (ex: personne
+                    // n'a confirmé le checkout) — cf. la même logique dans AdminBookingController.
+                    $endDate = $booking['endDate'] ?? $booking['end_date'] ?? $booking['checkOutDate'] ?? null;
+                    if ($endDate) {
+                        try {
+                            $end = new \DateTime($endDate);
+                            $today = new \DateTime('today');
+                            if ($end < $today) {
+                                continue;
+                            }
+                        } catch (\Exception $e) {
+                            // Date invalide : on ne bloque pas dessus, on considère la réservation comme active
+                        }
+                    }
+
                     $offerBookings[] = $booking;
                 }
             }

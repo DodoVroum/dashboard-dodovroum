@@ -1603,10 +1603,15 @@ class AdminComboOfferController extends Controller
                 }
                 
                 if ($bookingOfferId && (string) $bookingOfferId === (string) $id) {
+                    // Ignorer les réservations annulées ou terminées : elles ne bloquent pas la suppression
+                    $status = strtolower($booking['status'] ?? '');
+                    if (in_array($status, ['cancelled', 'annulee', 'annulée', 'completed', 'terminee', 'terminée'], true)) {
+                        continue;
+                    }
                     $offerBookings[] = $booking;
                 }
             }
-            
+
             $hasBookings = count($offerBookings) > 0;
             
             Log::info('Vérification réservations pour offre combinée', [

@@ -872,6 +872,15 @@ class DodoVroumApiService
     }
 
     /**
+     * Récupérer les réservations d'un utilisateur donné
+     * Endpoint: GET /api/admin/users/:id/bookings
+     */
+    public function getUserBookings(string $userId): array
+    {
+        return $this->get("admin/users/{$userId}/bookings");
+    }
+
+    /**
      * Approuver une réservation
      * Endpoint: PATCH /api/bookings/:id/approve
      * @return array{success: bool, message?: string}

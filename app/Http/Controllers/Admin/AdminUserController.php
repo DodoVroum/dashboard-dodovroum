@@ -297,9 +297,20 @@ class AdminUserController extends Controller
             // Debug : décommenter pour inspecter la réponse brute de l'API NestJS (identityPhotoFront, etc.)
             // dd($user);
 
+            $bookings = [];
+            try {
+                $bookings = $this->apiService->getUserBookings($id);
+            } catch (\Exception $e) {
+                Log::warning('Impossible de récupérer les réservations du client', [
+                    'id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return Inertia::render('Users/Show', [
                 'user' => $mappedUser,
                 'isProprietaire' => $isProprietaire,
+                'bookings' => $bookings,
             ]);
         } catch (\Exception $e) {
             Log::error('Erreur lors de la récupération des détails utilisateur', [

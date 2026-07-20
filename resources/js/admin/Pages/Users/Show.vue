@@ -92,6 +92,70 @@
           </dl>
         </div>
 
+        <!-- Réservations -->
+        <div class="bg-white border border-slate-200 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 class="text-lg font-semibold">Réservations ({{ bookings.length }})</h2>
+            <div v-if="bookings.length > 0" class="text-sm text-slate-500">
+              Total dépensé : <span class="font-semibold text-slate-900">{{ formatPrice(totalSpent) }} FCFA</span>
+            </div>
+          </div>
+          <div v-if="bookings.length > 0" class="space-y-4">
+            <div
+              v-for="booking in bookings"
+              :key="booking.id"
+              class="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-3 mb-2">
+                    <img
+                      v-if="getBookingImage(booking)"
+                      :src="getStorageImageUrl(getBookingImage(booking), 'residences')"
+                      alt=""
+                      class="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                      @error="($event.target as HTMLImageElement).style.display = 'none'"
+                    />
+                    <h3 class="font-semibold text-slate-900 truncate">{{ getBookingTitle(booking) }}</h3>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 text-sm text-slate-600">
+                    <div>
+                      <span class="font-medium">Dates:</span>
+                      {{ formatDate(booking.checkInDate) }} → {{ formatDate(booking.checkOutDate) }}
+                    </div>
+                    <div>
+                      <span class="font-medium">Montant total:</span> {{ formatPrice(booking.totalPrice ?? 0) }} FCFA
+                    </div>
+                    <div>
+                      <span class="font-medium">Montant payé:</span> {{ formatPrice(booking.totalPaid ?? 0) }} FCFA
+                    </div>
+                    <div>
+                      <span class="font-medium">Reste à payer:</span> {{ formatPrice(booking.remainingBalance ?? 0) }} FCFA
+                    </div>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-2 items-end flex-shrink-0">
+                  <span
+                    class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
+                    :class="getBookingStatusClass(booking.status)"
+                  >
+                    {{ formatBookingStatus(booking.status) }}
+                  </span>
+                  <span
+                    class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
+                    :class="getPaymentStatusClass(booking.paymentStatus)"
+                  >
+                    {{ formatPaymentStatus(booking.paymentStatus) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-sm text-slate-500 text-center py-8">
+            Aucune réservation
+          </div>
+        </div>
+
         <!-- Résidences du propriétaire -->
         <div v-if="isProprietaire" class="bg-white border border-slate-200 rounded-xl p-6">
           <div class="flex items-center justify-between mb-4">
@@ -587,6 +651,19 @@ const props = defineProps<{
     vehicles?: any[];
     identityVerification?: any;
   };
+  bookings?: Array<{
+    id: string;
+    status?: string;
+    paymentStatus?: string;
+    checkInDate?: string | null;
+    checkOutDate?: string | null;
+    totalPrice?: number;
+    totalPaid?: number;
+    remainingBalance?: number;
+    residence?: any;
+    vehicle?: any;
+    voiture?: any;
+  }>;
 }>();
 
 const isProprietaire = computed(() => {
@@ -620,6 +697,106 @@ const formatDate = (dateString: string | null): string => formatDateTime(dateStr
 const formatPrice = (price: number): string => {
   if (!price) return '0';
   return new Intl.NumberFormat('fr-FR').format(price);
+};
+
+const bookings = computed(() => props.bookings || []);
+
+const totalSpent = computed(() => {
+  return bookings.value.reduce((sum, booking) => sum + (Number(booking.totalPaid) || 0), 0);
+});
+
+const getBookingTitle = (booking: any): string => {
+  const residence = booking.residence;
+  const vehicle = booking.vehicle || booking.voiture;
+
+  if (residence) {
+    return residence.nom || residence.name || residence.title || 'Résidence';
+  }
+  if (vehicle) {
+    const name = getVehicleName(vehicle);
+    return name || 'Véhicule';
+  }
+  return booking.propertyName || booking.residenceName || booking.vehicleName || 'Réservation';
+};
+
+const getBookingImage = (booking: any): string | null => {
+  const residence = booking.residence;
+  const vehicle = booking.vehicle || booking.voiture;
+
+  if (residence) {
+    return residence.imageUrl || residence.images?.[0] || null;
+  }
+  if (vehicle) {
+    return vehicle.imageUrl || vehicle.images?.[0] || null;
+  }
+  return null;
+};
+
+const formatBookingStatus = (status?: string): string => {
+  const statusLower = (status || '').toLowerCase().trim();
+  const statusMap: Record<string, string> = {
+    pending: 'En attente',
+    confirmed: 'Confirmée',
+    confirmee: 'Confirmée',
+    'confirmée': 'Confirmée',
+    terminee: 'Terminée',
+    'terminée': 'Terminée',
+    completed: 'Terminée',
+    cancelled: 'Annulée',
+    canceled: 'Annulée',
+    annulee: 'Annulée',
+    'annulée': 'Annulée',
+    awaiting_payment: 'En attente de paiement',
+  };
+  return statusMap[statusLower] || status || 'Inconnu';
+};
+
+const getBookingStatusClass = (status?: string): string => {
+  const statusLower = (status || '').toLowerCase().trim();
+  if (statusLower === 'confirmed' || statusLower === 'confirmee' || statusLower === 'confirmée') {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+  if (statusLower === 'terminee' || statusLower === 'terminée' || statusLower === 'completed') {
+    return 'bg-blue-100 text-blue-700';
+  }
+  if (statusLower === 'cancelled' || statusLower === 'canceled' || statusLower === 'annulee' || statusLower === 'annulée') {
+    return 'bg-red-100 text-red-700';
+  }
+  if (statusLower === 'awaiting_payment') {
+    return 'bg-orange-100 text-orange-900';
+  }
+  if (statusLower === 'pending') {
+    return 'bg-amber-100 text-amber-700';
+  }
+  return 'bg-slate-100 text-slate-700';
+};
+
+const formatPaymentStatus = (status?: string): string => {
+  const statusLower = (status || '').toLowerCase().trim();
+  const statusMap: Record<string, string> = {
+    paid: 'Payé',
+    'payé': 'Payé',
+    unpaid: 'Non payé',
+    'non_payé': 'Non payé',
+    partial: 'Partiellement payé',
+    partially_paid: 'Partiellement payé',
+    pending: 'En attente',
+  };
+  return statusMap[statusLower] || status || 'Inconnu';
+};
+
+const getPaymentStatusClass = (status?: string): string => {
+  const statusLower = (status || '').toLowerCase().trim();
+  if (statusLower === 'paid' || statusLower === 'payé') {
+    return 'bg-emerald-100 text-emerald-800';
+  }
+  if (statusLower === 'partial' || statusLower === 'partially_paid') {
+    return 'bg-amber-100 text-amber-700';
+  }
+  if (statusLower === 'unpaid' || statusLower === 'non_payé') {
+    return 'bg-red-100 text-red-700';
+  }
+  return 'bg-slate-100 text-slate-700';
 };
 
 const getVehicleName = (vehicle: any): string => {

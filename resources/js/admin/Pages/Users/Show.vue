@@ -92,8 +92,8 @@
           </dl>
         </div>
 
-        <!-- Réservations -->
-        <div class="bg-white border border-slate-200 rounded-xl p-6">
+        <!-- Réservations (clients uniquement) -->
+        <div v-if="!isProprietaire" class="bg-white border border-slate-200 rounded-xl p-6">
           <h2 class="text-lg font-semibold mb-4">Réservations</h2>
 
           <template v-if="bookings.length > 0">

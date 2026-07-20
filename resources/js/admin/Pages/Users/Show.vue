@@ -94,63 +94,99 @@
 
         <!-- Réservations -->
         <div class="bg-white border border-slate-200 rounded-xl p-6">
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 class="text-lg font-semibold">Réservations ({{ bookings.length }})</h2>
-            <div v-if="bookings.length > 0" class="text-sm text-slate-500">
-              Total dépensé : <span class="font-semibold text-slate-900">{{ formatPrice(totalSpent) }} FCFA</span>
+          <h2 class="text-lg font-semibold mb-4">Réservations</h2>
+
+          <template v-if="bookings.length > 0">
+            <!-- Résumé -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <StatsCard title="Réservations" :value="totalBookingsCount">
+                <template #icon>
+                  <Calendar class="w-5 h-5" />
+                </template>
+              </StatsCard>
+              <StatsCard title="Total payé" :value="`${formatPrice(totalPaid)} FCFA`">
+                <template #icon>
+                  <Wallet class="w-5 h-5" />
+                </template>
+              </StatsCard>
+              <StatsCard title="Total réservé" :value="`${formatPrice(totalReserved)} FCFA`">
+                <template #icon>
+                  <CreditCard class="w-5 h-5" />
+                </template>
+              </StatsCard>
+              <StatsCard title="Reste dû" :value="`${formatPrice(totalDue)} FCFA`">
+                <template #icon>
+                  <AlertCircle class="w-5 h-5" />
+                </template>
+              </StatsCard>
             </div>
-          </div>
-          <div v-if="bookings.length > 0" class="space-y-4">
-            <div
-              v-for="booking in bookings"
-              :key="booking.id"
-              class="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
-            >
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-3 mb-2">
-                    <img
-                      v-if="getBookingImage(booking)"
-                      :src="getStorageImageUrl(getBookingImage(booking), 'residences')"
-                      alt=""
-                      class="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                      @error="($event.target as HTMLImageElement).style.display = 'none'"
-                    />
-                    <h3 class="font-semibold text-slate-900 truncate">{{ getBookingTitle(booking) }}</h3>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2 text-sm text-slate-600">
-                    <div>
-                      <span class="font-medium">Dates:</span>
-                      {{ formatDate(booking.checkInDate) }} → {{ formatDate(booking.checkOutDate) }}
-                    </div>
-                    <div>
-                      <span class="font-medium">Montant total:</span> {{ formatPrice(booking.totalPrice ?? 0) }} FCFA
-                    </div>
-                    <div>
-                      <span class="font-medium">Montant payé:</span> {{ formatPrice(booking.totalPaid ?? 0) }} FCFA
-                    </div>
-                    <div>
-                      <span class="font-medium">Reste à payer:</span> {{ formatPrice(booking.remainingBalance ?? 0) }} FCFA
-                    </div>
-                  </div>
+
+            <!-- Liste des réservations -->
+            <div class="space-y-3">
+              <div
+                v-for="booking in visibleBookings"
+                :key="booking.id"
+                class="flex gap-3 sm:gap-4 p-3 sm:p-4 border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all"
+              >
+                <div class="w-16 h-16 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                  <img
+                    v-if="getBookingImage(booking)"
+                    :src="getStorageImageUrl(getBookingImage(booking), 'residences')"
+                    alt=""
+                    class="w-full h-full object-cover"
+                    @error="($event.target as HTMLImageElement).style.display = 'none'"
+                  />
+                  <Building2 v-else-if="booking.residence" class="w-6 h-6 sm:w-8 sm:h-8 text-slate-300" />
+                  <Car v-else class="w-6 h-6 sm:w-8 sm:h-8 text-slate-300" />
                 </div>
-                <div class="flex flex-col gap-2 items-end flex-shrink-0">
-                  <span
-                    class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
-                    :class="getBookingStatusClass(booking.status)"
-                  >
-                    {{ formatBookingStatus(booking.status) }}
-                  </span>
-                  <span
-                    class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
-                    :class="getPaymentStatusClass(booking.paymentStatus)"
-                  >
-                    {{ formatPaymentStatus(booking.paymentStatus) }}
-                  </span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2 mb-1">
+                    <h3 class="font-semibold text-slate-900 truncate">{{ getBookingTitle(booking) }}</h3>
+                    <span
+                      class="self-start px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap"
+                      :class="getBookingStatusClass(booking.status)"
+                    >
+                      {{ formatBookingStatus(booking.status) }}
+                    </span>
+                  </div>
+                  <p class="text-sm text-slate-500 flex items-center gap-1.5 mb-3">
+                    <Calendar class="w-3.5 h-3.5 flex-shrink-0" />
+                    {{ formatDateRange(booking.checkInDate, booking.checkOutDate) }}
+                  </p>
+                  <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+                    <div>
+                      <p class="text-xs text-slate-400">Total</p>
+                      <p class="font-semibold text-slate-900">{{ formatPrice(booking.totalPrice ?? 0) }} FCFA</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-slate-400">Payé</p>
+                      <p class="font-semibold text-emerald-600">{{ formatPrice(booking.totalPaid ?? 0) }} FCFA</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-slate-400">Reste à payer</p>
+                      <p
+                        class="font-semibold"
+                        :class="(booking.remainingBalance ?? 0) > 0 ? 'text-amber-600' : 'text-slate-400'"
+                      >
+                        {{ formatPrice(booking.remainingBalance ?? 0) }} FCFA
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+
+            <!-- Voir plus -->
+            <div v-if="bookings.length > 10" class="mt-4 text-center">
+              <button
+                @click="showAllBookings = !showAllBookings"
+                class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                {{ showAllBookings ? 'Réduire' : `Voir toutes les réservations (${bookings.length})` }}
+              </button>
+            </div>
+          </template>
+
           <div v-else class="text-sm text-slate-500 text-center py-8">
             Aucune réservation
           </div>
@@ -626,7 +662,9 @@
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
-import { formatDateTime } from '../../utils/dates';
+import { formatDateTime, formatDateRange } from '../../utils/dates';
+import StatsCard from '../../Components/StatsCard.vue';
+import { Calendar, Wallet, CreditCard, AlertCircle, Building2, Car } from 'lucide-vue-next';
 
 const props = defineProps<{
   user: {
@@ -701,8 +739,33 @@ const formatPrice = (price: number): string => {
 
 const bookings = computed(() => props.bookings || []);
 
-const totalSpent = computed(() => {
+const showAllBookings = ref(false);
+
+// Les réservations les plus récentes (par date de début) en premier
+const sortedBookings = computed(() => {
+  return [...bookings.value].sort((a, b) => {
+    const dateA = a.checkInDate ? new Date(a.checkInDate).getTime() : 0;
+    const dateB = b.checkInDate ? new Date(b.checkInDate).getTime() : 0;
+    return dateB - dateA;
+  });
+});
+
+const visibleBookings = computed(() => {
+  return showAllBookings.value ? sortedBookings.value : sortedBookings.value.slice(0, 10);
+});
+
+const totalBookingsCount = computed(() => bookings.value.length);
+
+const totalPaid = computed(() => {
   return bookings.value.reduce((sum, booking) => sum + (Number(booking.totalPaid) || 0), 0);
+});
+
+const totalReserved = computed(() => {
+  return bookings.value.reduce((sum, booking) => sum + (Number(booking.totalPrice) || 0), 0);
+});
+
+const totalDue = computed(() => {
+  return bookings.value.reduce((sum, booking) => sum + (Number(booking.remainingBalance) || 0), 0);
 });
 
 const getBookingTitle = (booking: any): string => {
@@ -747,6 +810,10 @@ const formatBookingStatus = (status?: string): string => {
     annulee: 'Annulée',
     'annulée': 'Annulée',
     awaiting_payment: 'En attente de paiement',
+    expired: 'Expirée',
+    expiree: 'Expirée',
+    'expirée': 'Expirée',
+    encourssejour: 'En cours de séjour',
   };
   return statusMap[statusLower] || status || 'Inconnu';
 };
@@ -765,36 +832,14 @@ const getBookingStatusClass = (status?: string): string => {
   if (statusLower === 'awaiting_payment') {
     return 'bg-orange-100 text-orange-900';
   }
+  if (statusLower === 'expired' || statusLower === 'expiree' || statusLower === 'expirée') {
+    return 'bg-slate-100 text-slate-500';
+  }
+  if (statusLower === 'encourssejour') {
+    return 'bg-sky-100 text-sky-700';
+  }
   if (statusLower === 'pending') {
     return 'bg-amber-100 text-amber-700';
-  }
-  return 'bg-slate-100 text-slate-700';
-};
-
-const formatPaymentStatus = (status?: string): string => {
-  const statusLower = (status || '').toLowerCase().trim();
-  const statusMap: Record<string, string> = {
-    paid: 'Payé',
-    'payé': 'Payé',
-    unpaid: 'Non payé',
-    'non_payé': 'Non payé',
-    partial: 'Partiellement payé',
-    partially_paid: 'Partiellement payé',
-    pending: 'En attente',
-  };
-  return statusMap[statusLower] || status || 'Inconnu';
-};
-
-const getPaymentStatusClass = (status?: string): string => {
-  const statusLower = (status || '').toLowerCase().trim();
-  if (statusLower === 'paid' || statusLower === 'payé') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-  if (statusLower === 'partial' || statusLower === 'partially_paid') {
-    return 'bg-amber-100 text-amber-700';
-  }
-  if (statusLower === 'unpaid' || statusLower === 'non_payé') {
-    return 'bg-red-100 text-red-700';
   }
   return 'bg-slate-100 text-slate-700';
 };

@@ -503,17 +503,12 @@ class AdminUserController extends Controller
     public function destroy(string $id): RedirectResponse
     {
         try {
-            // Logique de suppression via le service API
-            $success = $this->apiService->deleteUser($id);
-
-            if (!$success) {
-                return redirect()->route('admin.users.index')->with('error', 'Impossible de supprimer cet utilisateur via l\'API.');
-            }
+            $this->apiService->deleteUser($id);
 
             return redirect()->route('admin.users.index')->with('success', 'Utilisateur supprimé définitivement.');
         } catch (\Exception $e) {
             Log::error('Destroy User Error: ' . $e->getMessage());
-            return redirect()->route('admin.users.index')->with('error', 'Erreur lors de la suppression.');
+            return redirect()->route('admin.users.index')->with('error', $e->getMessage() ?: 'Erreur lors de la suppression.');
         }
     }
 

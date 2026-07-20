@@ -688,21 +688,32 @@ class DodoVroumApiService
                 return true;
             }
 
+            // Extraire le message d'erreur de la réponse
+            $errorBody = $response->json();
+            $errorMessage = $errorBody['message'] ?? $errorBody['error'] ?? $response->body();
+
+            // Si c'est un tableau de messages (validation), les joindre
+            if (is_array($errorMessage)) {
+                $errorMessage = implode(', ', $errorMessage);
+            }
+
             Log::error("Erreur API sur {$endpoint}", [
                 'endpoint' => $endpoint,
                 'url' => $url,
                 'status' => $response->status(),
                 'body' => $response->body(),
+                'error_message' => $errorMessage,
             ]);
 
-            return false;
+            // Lancer une exception avec le message d'erreur pour que le contrôleur puisse l'afficher
+            throw new \Exception($errorMessage ?: 'Erreur lors de la requête à l\'API');
         } catch (\Exception $e) {
             Log::error('API DodoVroum DELETE exception', [
                 'endpoint' => $endpoint,
                 'error' => $e->getMessage(),
             ]);
 
-            return false;
+            throw $e;
         }
     }
 

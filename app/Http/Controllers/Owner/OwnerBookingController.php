@@ -257,7 +257,12 @@ class OwnerBookingController extends Controller
             );
 
             return Inertia::render('Owner/Bookings/Index', [
-                'bookings' => $paginated->items(),
+                // array_values() : Collection::forPage() conserve les clés d'origine (array_slice
+                // preserve_keys=true). Sur la page 1 les clés sont 0..14 (séquentielles) donc
+                // json_encode produit un tableau JSON ; sur la page 2 elles sont 15..19
+                // (non séquentielles) et json_encode produirait un OBJET JSON à la place,
+                // ce que le frontend interprète comme "pas de réservations" (Array.isArray === false).
+                'bookings' => array_values($paginated->items()),
                 'pagination' => [
                     'current_page' => $paginated->currentPage(),
                     'last_page' => $paginated->lastPage(),

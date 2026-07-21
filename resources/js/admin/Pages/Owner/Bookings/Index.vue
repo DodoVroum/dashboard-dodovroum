@@ -366,7 +366,15 @@ const props = defineProps<{
 }>();
 
 const error = props.error || '';
-const bookings = computed(() => (Array.isArray(props.bookings) ? props.bookings : []));
+// Défensif : si jamais props.bookings arrive comme objet indexé (clés non séquentielles
+// mal sérialisées en JSON côté backend) plutôt que comme tableau, on le normalise quand
+// même au lieu de le vider silencieusement.
+const bookings = computed(() => {
+  const raw = props.bookings as unknown;
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object') return Object.values(raw) as typeof props.bookings;
+  return [];
+});
 
 // Source de vérité unique pour le compteur affiché : le total global de la pagination
 // (identique à ce qu'affiche déjà le pied de tableau), pas la taille de la page courante

@@ -1073,40 +1073,19 @@ class AdminBookingController extends Controller
             // Calculer les paiements et déterminer le type de paiement
             $downPaymentAmount = 0;
             $downPaymentPercentage = null;
-            $totalPaid = 0;
             $totalPrice = $booking['totalPrice'] ?? $booking['total_price'] ?? 0;
             $paymentType = 'NONE';
-            
-            if (isset($booking['payments']) && is_array($booking['payments'])) {
-                foreach ($booking['payments'] as $payment) {
-                    $paymentStatus = strtolower($payment['status'] ?? $payment['statut'] ?? '');
-                    $isCompleted = in_array($paymentStatus, ['completed', 'completé', 'complet', 'validated', 'validé', 'paid', 'payé']);
-                    
-                    if ($isCompleted) {
-                        $amount = $payment['amount'] ?? $payment['montant'] ?? 0;
-                        $totalPaid += (float) $amount;
-                    }
-                    
-                    $paymentTypeStr = strtolower($payment['type'] ?? $payment['paymentType'] ?? '');
-                    $isDownPayment = str_contains($paymentTypeStr, 'acompte') || 
-                                    str_contains($paymentTypeStr, 'downpayment') || 
-                                    str_contains($paymentTypeStr, 'deposit') ||
-                                    (isset($payment['isDownPayment']) && $payment['isDownPayment']);
-                    
-                    if ($isDownPayment && $isCompleted) {
-                        $amount = $payment['amount'] ?? $payment['montant'] ?? 0;
-                        $downPaymentAmount += (float) $amount;
-                        
-                        if (preg_match('/(\d+)%/i', $paymentTypeStr, $matches)) {
-                            $downPaymentPercentage = (int) $matches[1];
-                        }
-                    }
-                }
-                
-                if ($downPaymentAmount > 0 && $downPaymentPercentage === null && $totalPrice > 0) {
-                    $downPaymentPercentage = round(($downPaymentAmount / $totalPrice) * 100);
-                }
-                
+
+            if (isset($booking['totalPaid'])) {
+                // Source de vérité : champs pré-calculés directement par l'API (totalPaid/
+                // remainingBalance/paymentStatus). Le tableau payments[] n'est plus présent/fiable
+                // dans le format actuel de l'API — on ne s'appuie plus dessus quand ces champs existent.
+                $totalPaid = (float) $booking['totalPaid'];
+                $remainingBalance = isset($booking['remainingBalance'])
+                    ? (float) $booking['remainingBalance']
+                    : max(0, $totalPrice - $totalPaid);
+                $paymentStatusApi = $booking['paymentStatus'] ?? null;
+
                 $tolerance = 0.01;
                 if ($totalPaid <= $tolerance) {
                     $paymentType = 'NONE';
@@ -1115,28 +1094,64 @@ class AdminBookingController extends Controller
                 } else {
                     $paymentType = 'DOWN_PAYMENT';
                 }
-            }
-            
-            if ($downPaymentAmount == 0 && isset($booking['notes'])) {
-                if (preg_match('/acompte.*?(\d+)%/i', $booking['notes'], $matches)) {
-                    $downPaymentPercentage = (int) $matches[1];
-                    $downPaymentAmount = ($totalPrice * $downPaymentPercentage) / 100;
-                    $totalPaid = $downPaymentAmount;
-                    $paymentType = 'DOWN_PAYMENT';
+            } else {
+                // Fallback de compatibilité : anciennes réponses API sans totalPaid/remainingBalance
+                // pré-calculés — on recalcule depuis payments[] comme avant.
+                $totalPaid = 0;
+
+                if (isset($booking['payments']) && is_array($booking['payments'])) {
+                    foreach ($booking['payments'] as $payment) {
+                        $paymentStatus = strtolower($payment['status'] ?? $payment['statut'] ?? '');
+                        $isCompleted = in_array($paymentStatus, ['completed', 'completé', 'complet', 'validated', 'validé', 'paid', 'payé']);
+
+                        if ($isCompleted) {
+                            $amount = $payment['amount'] ?? $payment['montant'] ?? 0;
+                            $totalPaid += (float) $amount;
+                        }
+
+                        $paymentTypeStr = strtolower($payment['type'] ?? $payment['paymentType'] ?? '');
+                        $isDownPayment = str_contains($paymentTypeStr, 'acompte') ||
+                                        str_contains($paymentTypeStr, 'downpayment') ||
+                                        str_contains($paymentTypeStr, 'deposit') ||
+                                        (isset($payment['isDownPayment']) && $payment['isDownPayment']);
+
+                        if ($isDownPayment && $isCompleted) {
+                            $amount = $payment['amount'] ?? $payment['montant'] ?? 0;
+                            $downPaymentAmount += (float) $amount;
+
+                            if (preg_match('/(\d+)%/i', $paymentTypeStr, $matches)) {
+                                $downPaymentPercentage = (int) $matches[1];
+                            }
+                        }
+                    }
+
+                    if ($downPaymentAmount > 0 && $downPaymentPercentage === null && $totalPrice > 0) {
+                        $downPaymentPercentage = round(($downPaymentAmount / $totalPrice) * 100);
+                    }
+
+                    $tolerance = 0.01;
+                    if ($totalPaid <= $tolerance) {
+                        $paymentType = 'NONE';
+                    } elseif (abs($totalPaid - $totalPrice) <= $tolerance) {
+                        $paymentType = 'FULL_PAYMENT';
+                    } else {
+                        $paymentType = 'DOWN_PAYMENT';
+                    }
                 }
+
+                if ($downPaymentAmount == 0 && isset($booking['notes'])) {
+                    if (preg_match('/acompte.*?(\d+)%/i', $booking['notes'], $matches)) {
+                        $downPaymentPercentage = (int) $matches[1];
+                        $downPaymentAmount = ($totalPrice * $downPaymentPercentage) / 100;
+                        $totalPaid = $downPaymentAmount;
+                        $paymentType = 'DOWN_PAYMENT';
+                    }
+                }
+
+                $remainingBalance = max(0, $totalPrice - $totalPaid);
+                $paymentStatusApi = $booking['paymentStatus'] ?? null;
             }
-            
-            // Si la réservation est en attente, considérer que le client a payé selon l'API
-            // (acompte ou totalité selon les données de paiement)
-            $bookingStatus = strtolower($booking['status'] ?? 'pending');
-            if ($bookingStatus === 'pending') {
-                // Si aucun paiement n'est trouvé dans l'API mais qu'on a un acompte dans les notes
-                // ou si totalPaid est 0, on garde la logique normale
-                // Sinon, on utilise les données de l'API pour déterminer le type de paiement
-                // (déjà fait ci-dessus avec $paymentType)
-            }
-            
-            $remainingBalance = max(0, $totalPrice - $totalPaid);
+
             $isFullyPaid = abs($remainingBalance) <= 0.01;
 
             [$unitPriceAmount, $unitPriceLabel] = $this->extractUnitPrice($booking);
@@ -1289,6 +1304,7 @@ class AdminBookingController extends Controller
                 'downPaymentPercentage' => $downPaymentPercentage,
                 'totalPaid' => $totalPaid,
                 'remainingBalance' => $remainingBalance,
+                'paymentStatus' => $paymentStatusApi,
                 'isFullyPaid' => $isFullyPaid,
                 'paymentType' => $paymentType,
                 'payments' => $payments,

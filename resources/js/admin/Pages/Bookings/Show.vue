@@ -528,8 +528,9 @@
               </div>
               <div>
                 <div class="text-slate-500">Statut</div>
-                <div class="font-semibold" :class="isBookingPaid ? 'text-emerald-600' : 'text-amber-600'">
-                  {{ isBookingPaid ? 'Entièrement payé' : 'En attente de paiement' }}
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="w-2 h-2 rounded-full" :class="paymentStatusInfo.dotClass"></span>
+                  <span class="font-semibold" :class="paymentStatusInfo.textClass">{{ paymentStatusInfo.label }}</span>
                 </div>
               </div>
             </div>
@@ -708,6 +709,7 @@ const props = defineProps<{
     totalPrice: number;
     totalPaid?: number;
     remainingBalance?: number;
+    paymentStatus?: string | null;
     isFullyPaid?: boolean;
     payments?: Array<{
       id: string | null;
@@ -976,6 +978,22 @@ const isPaidStatus = (status?: string | null): boolean => {
 
 const isBookingPaid = computed(() => {
   return Boolean(props.booking.isFullyPaid) || isPaidStatus(props.booking.status);
+});
+
+// Badge paiement 3 états, aligné sur Owner/Bookings/Show.vue — basé sur les montants
+// (totalPaid/totalPrice), pas uniquement sur paymentStatus/paymentType, pour rester
+// fiable même sur d'anciennes réservations où ces champs peuvent être absents/obsolètes.
+const paymentStatusInfo = computed(() => {
+  const total = props.booking.totalPrice ?? 0;
+  const paid = props.booking.totalPaid ?? 0;
+
+  if (paid <= 0) {
+    return { label: 'Non payé', dotClass: 'bg-red-500', textClass: 'text-red-700' };
+  }
+  if (paid >= total) {
+    return { label: 'Paiement complet', dotClass: 'bg-emerald-500', textClass: 'text-emerald-700' };
+  }
+  return { label: 'Acompte payé', dotClass: 'bg-amber-500', textClass: 'text-amber-700' };
 });
 
 const displayedRemainingBalance = computed(() => {

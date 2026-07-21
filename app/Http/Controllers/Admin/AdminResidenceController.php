@@ -311,7 +311,10 @@ class AdminResidenceController extends Controller
         );
 
         return Inertia::render('Residences/Archived', [
-            'residences' => $paginated->items(),
+            // array_values() : Collection::forPage() conserve les clés d'origine, non
+            // séquentielles en page 2+, ce qui ferait sérialiser un objet JSON au lieu
+            // d'un tableau.
+            'residences' => array_values($paginated->items()),
             'pagination' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page'    => $paginated->lastPage(),

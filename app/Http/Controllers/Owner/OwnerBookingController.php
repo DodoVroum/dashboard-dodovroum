@@ -235,6 +235,7 @@ class OwnerBookingController extends Controller
                     'total' => (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0),
                     'status' => $finalStatus, // Utiliser le statut final calculé
                     'rawStatus' => $rawStatus, // Garder le statut brut pour debug
+                    'paymentStatus' => $booking['paymentStatus'] ?? null, // PAID/UNPAID — champ distinct de status depuis /my-properties-bookings
                     'ownerConfirmedAt' => $ownerConfirmedAt, // Ajouter pour référence
                 ];
             }, $bookings);

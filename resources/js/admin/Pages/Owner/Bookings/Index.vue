@@ -89,30 +89,13 @@
     <!-- Tableau des réservations -->
     <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
       <div class="px-6 pt-5 pb-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            @click="activeTab = 'active'"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-            :class="activeTab === 'active' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-          >
-            Actives (PAID + CONFIRMED)
-          </button>
-          <button
-            type="button"
-            @click="activeTab = 'archives'"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-            :class="activeTab === 'archives' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-          >
-            Archives / Echecs
-          </button>
-        </div>
+        <h2 class="text-sm font-semibold text-slate-700">Toutes les réservations ({{ bookings.length }})</h2>
         <p class="text-xs text-slate-500">
           Rafraichissement automatique toutes les 60s
         </p>
       </div>
 
-      <div v-if="displayedBookings.length === 0" class="p-12 text-center">
+      <div v-if="bookings.length === 0" class="p-12 text-center">
         <p class="text-slate-500">Aucune réservation trouvée</p>
       </div>
 
@@ -141,7 +124,7 @@
         </thead>
         <tbody class="divide-y divide-slate-200">
           <tr
-            v-for="booking in displayedBookings"
+            v-for="booking in bookings"
             :key="booking.id"
             class="hover:bg-slate-50 cursor-pointer transition-colors active:bg-slate-100 min-h-[48px]"
             role="button"
@@ -287,7 +270,7 @@
                           ? 'text-emerald-600 hover:bg-emerald-50'
                           : 'text-slate-400 bg-slate-100 cursor-not-allowed'"
                       >
-                        {{ isPaidStatus(booking.status) ? '✅ Confirmer la réservation' : '💳 En attente de paiement' }}
+                        {{ isPaidStatus(booking.status, booking.paymentStatus) ? '✅ Confirmer la réservation' : '💳 En attente de paiement' }}
                       </button>
                       <button
                         @click="rejectBooking(booking.id)"
@@ -349,6 +332,7 @@ const props = defineProps<{
     totalPrice?: number;
     total?: number;
     status: string;
+    paymentStatus?: string | null;
     ownerConfirmedAt?: string | null;
   }>;
   filters?: {
@@ -375,7 +359,7 @@ const props = defineProps<{
 }>();
 
 const error = props.error || '';
-const activeTab = ref<'active' | 'archives'>('active');
+const bookings = computed(() => (Array.isArray(props.bookings) ? props.bookings : []));
 const now = ref(Date.now());
 let clockInterval: ReturnType<typeof setInterval> | null = null;
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
@@ -615,7 +599,10 @@ const canApproveOrReject = (status: string): boolean => {
   return !finalStatuses.includes(statusLower);
 };
 
-const isPaidStatus = (status?: string): boolean => {
+const isPaidStatus = (status?: string, paymentStatus?: string | null): boolean => {
+  // Depuis /my-properties-bookings, "payé" est porté par paymentStatus (PAID/UNPAID),
+  // distinct de status (confirmed/pending/expired/enCoursSejour...).
+  if (paymentStatus && paymentStatus.toUpperCase() === 'PAID') return true;
   if (!status) return false;
   const statusLower = status.toLowerCase().trim();
   return statusLower === 'paid' || statusLower === 'payé' || statusLower === 'paye';
@@ -631,21 +618,6 @@ const isConfirmedStatus = (status?: string): boolean => {
   if (!status) return false;
   const statusLower = status.toLowerCase().trim();
   return statusLower === 'confirmed' || statusLower === 'confirmee' || statusLower === 'confirmée';
-};
-
-const isCancelledOrFailedStatus = (status?: string): boolean => {
-  if (!status) return false;
-  const statusLower = status.toLowerCase().trim();
-  return [
-    'cancelled',
-    'canceled',
-    'annulee',
-    'annulée',
-    'failed',
-    'echec',
-    'échoué',
-    'expired',
-  ].includes(statusLower);
 };
 
 const getPendingAgeMs = (booking: { createdAt?: string }): number => {
@@ -679,21 +651,11 @@ const formatCountdown = (ms: number): string => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const canConfirmBooking = (booking: { status?: string; ownerConfirmedAt?: string | null; createdAt?: string }): boolean => {
+const canConfirmBooking = (booking: { status?: string; paymentStatus?: string | null; ownerConfirmedAt?: string | null; createdAt?: string }): boolean => {
   if (booking.ownerConfirmedAt) return false;
   if (isExpiredPending(booking)) return false;
-  return isPaidStatus(booking.status);
+  return isPaidStatus(booking.status, booking.paymentStatus);
 };
-
-const displayedBookings = computed(() => {
-  if (!Array.isArray(props.bookings)) return [];
-  if (activeTab.value === 'active') {
-    return props.bookings.filter((booking) => isPaidStatus(booking.status) || isConfirmedStatus(booking.status));
-  }
-  return props.bookings.filter((booking) => {
-    return isCancelledOrFailedStatus(booking.status) || isExpiredPending(booking);
-  });
-});
 
 const formatStatus = (status?: string): string => {
   if (!status) return 'Inconnu';
@@ -717,6 +679,8 @@ const formatStatus = (status?: string): string => {
     return 'Échouée';
   } else if (statusLower === 'completed' || statusLower === 'terminee' || statusLower === 'terminée') {
     return 'Terminée';
+  } else if (statusLower === 'encourssejour' || statusLower === 'en_cours_sejour') {
+    return 'En cours de séjour';
   }
   return status;
 };
@@ -743,6 +707,8 @@ const getStatusClass = (status?: string): string => {
     return 'bg-red-100 text-red-700';
   } else if (statusLower === 'completed' || statusLower === 'terminee' || statusLower === 'terminée') {
     return 'bg-blue-100 text-blue-700';
+  } else if (statusLower === 'encourssejour' || statusLower === 'en_cours_sejour') {
+    return 'bg-sky-100 text-sky-700';
   }
   return 'bg-slate-100 text-slate-700';
 };

@@ -209,14 +209,10 @@
                     ></div>
                   </div>
                 </div>
-                <div v-if="isBookingSettled(booking)" class="pt-1">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                    Soldé
-                  </span>
-                </div>
-                <div v-else-if="getCollectedPaid(booking) > 0" class="pt-1">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
-                    Acompte versé : {{ formatPrice(getCollectedPaid(booking)) }} CFA
+                <div class="pt-1 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full" :class="paymentStatusInfo(booking).dotClass"></span>
+                  <span class="text-xs font-semibold" :class="paymentStatusInfo(booking).textClass">
+                    {{ paymentStatusInfo(booking).label }}
                   </span>
                 </div>
               </div>
@@ -371,6 +367,7 @@ const props = defineProps<{
     downPaymentPercentage?: number | null;
     totalPaid?: number;
     remainingBalance?: number;
+    paymentStatus?: string | null;
     isFullyPaid?: boolean;
     paymentType?: 'NONE' | 'DOWN_PAYMENT' | 'FULL_PAYMENT';
     status: string;
@@ -698,32 +695,20 @@ const getStatusClass = (status: string): string => {
   return 'bg-slate-100 text-slate-800';
 };
 
-const getPaymentTypeLabel = (paymentType: string | undefined): string => {
-  if (!paymentType) return 'Non payé';
-  switch (paymentType) {
-    case 'NONE':
-      return 'Non payé';
-    case 'DOWN_PAYMENT':
-      return 'Acompte';
-    case 'FULL_PAYMENT':
-      return 'Payé en totalité';
-    default:
-      return paymentType;
-  }
-};
+// Badge paiement 3 états, aligné sur Bookings/Show.vue — basé sur les montants
+// (totalPaid/totalPrice), pas uniquement sur paymentStatus/paymentType, pour rester
+// fiable même sur d'anciennes réservations où ces champs peuvent être absents/obsolètes.
+const paymentStatusInfo = (booking: { totalPrice: number; totalPaid?: number }): { label: string; dotClass: string; textClass: string } => {
+  const total = booking.totalPrice ?? 0;
+  const paid = booking.totalPaid ?? 0;
 
-const getPaymentTypeClass = (paymentType: string | undefined): string => {
-  if (!paymentType) return 'bg-slate-100 text-slate-600';
-  switch (paymentType) {
-    case 'NONE':
-      return 'bg-red-100 text-red-700';
-    case 'DOWN_PAYMENT':
-      return 'bg-yellow-100 text-yellow-700';
-    case 'FULL_PAYMENT':
-      return 'bg-emerald-100 text-emerald-700';
-    default:
-      return 'bg-slate-100 text-slate-600';
+  if (paid <= 0) {
+    return { label: 'Non payé', dotClass: 'bg-red-500', textClass: 'text-red-700' };
   }
+  if (paid >= total) {
+    return { label: 'Paiement complet', dotClass: 'bg-emerald-500', textClass: 'text-emerald-700' };
+  }
+  return { label: 'Acompte payé', dotClass: 'bg-amber-500', textClass: 'text-amber-700' };
 };
 
 const formatBookingType = (bookingType?: string): string => {

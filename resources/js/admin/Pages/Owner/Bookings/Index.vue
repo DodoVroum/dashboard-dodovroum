@@ -375,6 +375,9 @@ const totalBookingsCount = computed(() => props.pagination?.total ?? bookings.va
 const now = ref(Date.now());
 let clockInterval: ReturnType<typeof setInterval> | null = null;
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
+let isNavigating = false;
+let removeNavStartListener: (() => void) | null = null;
+let removeNavFinishListener: (() => void) | null = null;
 
 // Gestion des images
 const imageErrors = ref<Record<string | number, boolean>>({});
@@ -477,8 +480,19 @@ onMounted(() => {
     now.value = Date.now();
   }, 1000);
 
+  // Suivi des navigations Inertia en cours (pagination, filtres, approuver/rejeter...)
+  // pour ne jamais laisser l'auto-refresh partir en parallèle et faire arriver
+  // une réponse (bookings/pagination/stats) désynchronisée de la page réellement affichée.
+  removeNavStartListener = router.on('start', () => {
+    isNavigating = true;
+  });
+  removeNavFinishListener = router.on('finish', () => {
+    isNavigating = false;
+  });
+
   // Auto-refresh pour retirer les reservations annulees cote serveur.
   refreshInterval = setInterval(() => {
+    if (isNavigating) return; // une navigation est déjà en cours : on ne déclenche pas de requête concurrente
     router.reload({
       preserveScroll: true,
       preserveState: true,
@@ -491,6 +505,8 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   if (clockInterval) clearInterval(clockInterval);
   if (refreshInterval) clearInterval(refreshInterval);
+  if (removeNavStartListener) removeNavStartListener();
+  if (removeNavFinishListener) removeNavFinishListener();
 });
 
 // Fonctions d'approbation et de rejet

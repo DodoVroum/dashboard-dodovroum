@@ -738,7 +738,12 @@ class AdminBookingController extends Controller
             ]);
 
             return Inertia::render('Bookings/Index', [
-                'bookings' => $paginated->items(),
+                // array_values() : Collection::forPage() conserve les clés d'origine
+                // (array_slice preserve_keys=true) ; sur la page 2+ ces clés ne sont plus
+                // séquentielles depuis 0, et json_encode() sérialiserait alors un objet JSON
+                // au lieu d'un tableau (même bug déjà corrigé dans OwnerBookingController
+                // et AdminUserController).
+                'bookings' => array_values($paginated->items()),
                 'pagination' => [
                     'current_page' => $paginated->currentPage(),
                     'last_page' => $paginated->lastPage(),

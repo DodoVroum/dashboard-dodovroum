@@ -122,6 +122,12 @@
               Total
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Payé
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Reste à payer
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
               Statut
             </th>
             <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -178,6 +184,25 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm font-medium text-slate-900">
                 {{ formatPrice(booking.totalPrice || booking.total || 0) }} CFA
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-emerald-600">
+                {{ formatPrice(getPaid(booking)) }} CFA
+              </div>
+              <span
+                class="mt-1 inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+                :class="getPaymentBadge(booking).class"
+              >
+                {{ getPaymentBadge(booking).label }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div
+                class="text-sm font-medium"
+                :class="getRemaining(booking) > 0 ? 'text-amber-600' : 'text-slate-400'"
+              >
+                {{ formatPrice(getRemaining(booking)) }} CFA
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -338,6 +363,8 @@ const props = defineProps<{
     createdAt?: string;
     totalPrice?: number;
     total?: number;
+    totalPaid?: number;
+    remainingBalance?: number;
     status: string;
     paymentStatus?: string | null;
     ownerConfirmedAt?: string | null;
@@ -642,6 +669,37 @@ const isPaidStatus = (status?: string, paymentStatus?: string | null): boolean =
   if (!status) return false;
   const statusLower = status.toLowerCase().trim();
   return statusLower === 'paid' || statusLower === 'payé' || statusLower === 'paye';
+};
+
+// --- Montant payé / reste à payer -------------------------------------------------
+// Compatibilité anciennes réservations : totalPaid/remainingBalance peuvent être absents.
+type BookingPayment = { totalPrice?: number; total?: number; totalPaid?: number; remainingBalance?: number; paymentStatus?: string | null };
+
+const getTotal = (booking: BookingPayment): number => booking.totalPrice ?? booking.total ?? 0;
+
+const getPaid = (booking: BookingPayment): number => booking.totalPaid ?? 0;
+
+const getRemaining = (booking: BookingPayment): number => {
+  if (typeof booking.remainingBalance === 'number') return booking.remainingBalance;
+  return Math.max(0, getTotal(booking) - getPaid(booking));
+};
+
+const getPaymentBadge = (booking: BookingPayment): { label: string; class: string } => {
+  const total = getTotal(booking);
+  const paid = getPaid(booking);
+
+  if (paid <= 0) {
+    return { label: 'Non payé', class: 'bg-red-100 text-red-700' };
+  }
+  // Ne pas se fier uniquement à paymentStatus (l'API n'a pas forcément de valeur PARTIAL) :
+  // on déduit l'acompte via 0 < totalPaid < totalPrice.
+  if (booking.paymentStatus?.toUpperCase() === 'PAID' || paid >= total) {
+    return { label: 'Payé intégralement', class: 'bg-emerald-100 text-emerald-700' };
+  }
+  if (paid > 0 && paid < total) {
+    return { label: 'Acompte payé', class: 'bg-amber-100 text-amber-700' };
+  }
+  return { label: 'Non payé', class: 'bg-red-100 text-red-700' };
 };
 
 const isPendingStatus = (status?: string): boolean => {

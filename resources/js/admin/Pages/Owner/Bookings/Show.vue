@@ -157,6 +157,34 @@
       </div>
     </div>
 
+    <!-- Paiement -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <Wallet class="w-5 h-5 text-blue-600" />
+        <h3 class="text-lg font-semibold text-slate-900">Paiement</h3>
+      </div>
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <dt class="text-sm font-medium text-slate-500 mb-1">Montant total</dt>
+          <dd class="text-base font-semibold text-slate-900">{{ formatPrice(paymentTotal) }} CFA</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-slate-500 mb-1">Montant payé</dt>
+          <dd class="text-base font-semibold text-emerald-600">{{ formatPrice(paymentPaid) }} CFA</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-slate-500 mb-1">Reste à payer</dt>
+          <dd class="text-base font-semibold" :class="paymentRemaining > 0 ? 'text-amber-600' : 'text-slate-400'">
+            {{ formatPrice(paymentRemaining) }} CFA
+          </dd>
+        </div>
+      </dl>
+      <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+        <span class="w-2.5 h-2.5 rounded-full" :class="paymentInfo.dotClass"></span>
+        <span class="text-sm font-medium" :class="paymentInfo.textClass">{{ paymentInfo.label }}</span>
+      </div>
+    </div>
+
     <!-- Confirmer le départ (checkout manuel) -->
     <div
       v-if="canShowManualCheckOut"
@@ -432,6 +460,7 @@ import {
   Calendar,
   Users,
   DollarSign,
+  Wallet,
   CheckCircle,
   Clock,
   Mail,
@@ -473,6 +502,9 @@ const props = defineProps<{
     endDate?: string | null;
     totalPrice?: number;
     total?: number;
+    totalPaid?: number;
+    remainingBalance?: number;
+    paymentStatus?: string | null;
     unitPriceAmount?: number | null;
     unitPriceLabel?: string | null;
     status: string;
@@ -526,6 +558,33 @@ const formatPrice = (price: number | null | undefined): string => {
   if (!price) return '0';
   return new Intl.NumberFormat('fr-FR').format(price);
 };
+
+// --- Montant payé / reste à payer -------------------------------------------------
+// Compatibilité anciennes réservations : totalPaid/remainingBalance peuvent être absents.
+const paymentTotal = computed(() => props.booking.totalPrice ?? props.booking.total ?? 0);
+const paymentPaid = computed(() => props.booking.totalPaid ?? 0);
+const paymentRemaining = computed(() => {
+  if (typeof props.booking.remainingBalance === 'number') return props.booking.remainingBalance;
+  return Math.max(0, paymentTotal.value - paymentPaid.value);
+});
+
+const paymentInfo = computed(() => {
+  const total = paymentTotal.value;
+  const paid = paymentPaid.value;
+
+  if (paid <= 0) {
+    return { label: 'Non payé', dotClass: 'bg-red-500', textClass: 'text-red-700' };
+  }
+  // Ne pas se fier uniquement à paymentStatus (l'API n'a pas forcément de valeur PARTIAL) :
+  // on déduit l'acompte via 0 < totalPaid < totalPrice.
+  if (props.booking.paymentStatus?.toUpperCase() === 'PAID' || paid >= total) {
+    return { label: 'Paiement complet', dotClass: 'bg-emerald-500', textClass: 'text-emerald-700' };
+  }
+  if (paid > 0 && paid < total) {
+    return { label: 'Acompte payé', dotClass: 'bg-amber-500', textClass: 'text-amber-700' };
+  }
+  return { label: 'Non payé', dotClass: 'bg-red-500', textClass: 'text-red-700' };
+});
 
 const imageErrors = ref<Record<string, boolean>>({});
 

@@ -233,6 +233,8 @@ class OwnerBookingController extends Controller
                     'endDate' => $endDate,
                     'totalPrice' => (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0),
                     'total' => (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0),
+                    'totalPaid' => (float) ($booking['totalPaid'] ?? 0),
+                    'remainingBalance' => (float) ($booking['remainingBalance'] ?? 0),
                     'status' => $finalStatus, // Utiliser le statut final calculé
                     'rawStatus' => $rawStatus, // Garder le statut brut pour debug
                     'paymentStatus' => $booking['paymentStatus'] ?? null, // PAID/UNPAID — champ distinct de status depuis /my-properties-bookings
@@ -554,6 +556,9 @@ class OwnerBookingController extends Controller
                 'endDate' => $booking['endDate'] ?? $booking['end_date'] ?? $booking['checkOutDate'] ?? null,
                 'totalPrice' => (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0),
                 'total' => (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0),
+                'totalPaid' => (float) ($booking['totalPaid'] ?? 0),
+                'remainingBalance' => (float) ($booking['remainingBalance'] ?? 0),
+                'paymentStatus' => $booking['paymentStatus'] ?? null,
                 'unitPriceAmount' => $unitPriceAmount,
                 'unitPriceLabel' => $unitPriceLabel,
                 'status' => $finalStatus,

@@ -747,6 +747,9 @@ class OwnerComboOfferController extends Controller
                     'startDate' => $startDate,
                     'endDate' => $endDate,
                     'amount' => $booking['totalPrice'] ?? $booking['total_price'] ?? 0,
+                    'totalPaid' => (float) ($booking['totalPaid'] ?? 0),
+                    'remainingBalance' => (float) ($booking['remainingBalance'] ?? 0),
+                    'paymentStatus' => $booking['paymentStatus'] ?? null,
                     'status' => $statusFormatted,
                     'statusRaw' => $status,
                 ];

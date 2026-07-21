@@ -362,6 +362,7 @@
                   <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dates</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Montant</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paiement</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Statut</th>
                   <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
                 </tr>
@@ -376,6 +377,14 @@
                   </td>
                   <td class="px-4 py-3 text-sm font-medium text-slate-900">
                     {{ formatPrice(booking.amount) }} CFA
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full" :class="paymentStatusInfo(booking).dotClass"></span>
+                      <span class="text-xs font-medium" :class="paymentStatusInfo(booking).textClass">
+                        {{ paymentStatusInfo(booking).label }}
+                      </span>
+                    </div>
                   </td>
                   <td class="px-4 py-3">
                     <span
@@ -567,6 +576,9 @@ const props = defineProps<{
     startDate?: string;
     endDate?: string;
     amount: number;
+    totalPaid?: number;
+    remainingBalance?: number;
+    paymentStatus?: string | null;
     status: string;
     statusRaw: string;
   }>;
@@ -726,6 +738,22 @@ const bookingsForCalendar = computed(() => {
 // Formatage
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('fr-FR').format(price);
+};
+
+// Badge paiement 3 états, identique à Owner/Bookings/Index.vue et Bookings/Show.vue —
+// basé sur les montants (totalPaid/amount), pas uniquement sur paymentStatus, pour rester
+// fiable même sur d'anciennes réservations où ce champ peut être absent.
+const paymentStatusInfo = (booking: { amount: number; totalPaid?: number }): { label: string; dotClass: string; textClass: string } => {
+  const total = booking.amount ?? 0;
+  const paid = booking.totalPaid ?? 0;
+
+  if (paid <= 0) {
+    return { label: 'Non payé', dotClass: 'bg-red-500', textClass: 'text-red-700' };
+  }
+  if (paid >= total) {
+    return { label: 'Paiement complet', dotClass: 'bg-emerald-500', textClass: 'text-emerald-700' };
+  }
+  return { label: 'Acompte payé', dotClass: 'bg-amber-500', textClass: 'text-amber-700' };
 };
 
 const formatNumber = (num: number): string => {

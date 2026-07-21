@@ -59,75 +59,20 @@ class OwnerBookingController extends Controller
         }
 
         try {
-            // Récupérer le proprietaireId réel
-            $proprietaireId = $this->getProprietaireId($user);
-            
-            if (!$proprietaireId) {
-                Log::error('Impossible de récupérer le proprietaireId pour les réservations', [
-                    'user_id' => $user->getAuthIdentifier(),
-                ]);
-                return Inertia::render('Owner/Bookings/Index', [
-                    'bookings' => [],
-                    'pagination' => (new LengthAwarePaginator([], 0, 15, 1))->toArray(),
-                    'filters' => [],
-                    'stats' => [
-                        'totalBookings' => 0,
-                        'confirmedBookings' => 0,
-                        'pendingBookings' => 0,
-                        'cancelledBookings' => 0,
-                        'totalRevenue' => 0,
-                        'monthRevenue' => 0,
-                    ],
-                    'error' => 'Impossible de récupérer vos réservations. Veuillez contacter le support.',
-                ]);
-            }
-            
-            // Préparer les filtres API (sans proprietaireId car l'API ne filtre pas correctement)
-            // On filtrera côté serveur pour garantir la sécurité
+            // Préparer les filtres API
             $filters = [];
-            
+
             if ($request->has('search') && $request->search) {
                 $filters['search'] = $request->search;
             }
-            
+
             if ($request->has('status') && $request->status) {
                 $filters['status'] = $request->status;
             }
-            
-            // Récupérer toutes les réservations et filtrer côté serveur par proprietaireId
-            // (l'API ne filtre pas correctement par proprietaireId pour les réservations)
-            $allBookings = $this->apiService->getBookings($filters);
-            $bookings = [];
-            
-            Log::info('OwnerBookingController::index - Début du filtrage', [
-                'proprietaireId' => $proprietaireId,
-                'total_bookings_api' => count($allBookings),
-            ]);
-            
-            foreach ($allBookings as $booking) {
-                $bookingOwnerId = $this->bookingOwnerScopeService->resolveOwnerIdForBooking($booking);
-                $matches = $this->bookingOwnerScopeService->matchesProprietaire($bookingOwnerId, $proprietaireId);
 
-                // Log pour déboguer (seulement les premières réservations pour éviter trop de logs)
-                if (count($bookings) < 3 && count($allBookings) > 0) {
-                    Log::debug('OwnerBookingController::index - Filtrage réservation', [
-                        'booking_id' => $booking['id'] ?? $booking['_id'] ?? 'unknown',
-                        'booking_ownerId_direct' => $booking['ownerId'] ?? null,
-                        'booking_proprietaireId_direct' => $booking['proprietaireId'] ?? null,
-                        'booking_owner_id_found' => $bookingOwnerId,
-                        'proprietaire_id_recherche' => $proprietaireId,
-                        'matches' => $matches,
-                        'has_residence' => isset($booking['residence']),
-                        'has_vehicle' => isset($booking['vehicle']) || isset($booking['voiture']),
-                        'has_offer' => isset($booking['offer']),
-                        'vehicle_ownerId' => isset($booking['vehicle']['proprietaireId']) || isset($booking['vehicle']['ownerId']) ? ($booking['vehicle']['proprietaireId'] ?? $booking['vehicle']['ownerId'] ?? null) : null,
-                    ]);
-                }
-
-                if ($matches) {
-                    $bookings[] = $booking;
-                }
-            }
+            // L'endpoint filtre déjà par propriétaire connecté côté NestJS (via le JWT) :
+            // plus besoin de récupérer toutes les réservations de la plateforme et de filtrer en PHP.
+            $bookings = $this->apiService->getMyPropertiesBookings($filters);
 
             // Sans filtre statut explicite : exclure les brouillons AWAITING_PAYMENT (tentatives abandonnées à l’étape paiement)
             if (! $request->filled('status')) {
@@ -135,32 +80,7 @@ class OwnerBookingController extends Controller
                     return strtoupper($booking['status'] ?? '') !== 'AWAITING_PAYMENT';
                 }));
             }
-            
-            Log::info('OwnerBookingController::index - Filtrage terminé', [
-                'proprietaireId' => $proprietaireId,
-                'proprietaireId_type' => gettype($proprietaireId),
-                'total_bookings_api' => count($allBookings),
-                'bookings_filtrees' => count($bookings),
-            ]);
-            
-            // Si aucune réservation trouvée, logger un exemple de structure pour déboguer
-            if (count($bookings) === 0 && count($allBookings) > 0) {
-                $sampleBooking = $allBookings[0];
-                Log::warning('OwnerBookingController::index - Aucune réservation ne correspond au proprietaireId', [
-                    'proprietaireId_recherche' => $proprietaireId,
-                    'sample_booking_id' => $sampleBooking['id'] ?? $sampleBooking['_id'] ?? 'unknown',
-                    'sample_booking_keys' => array_keys($sampleBooking),
-                    'sample_has_ownerId' => isset($sampleBooking['ownerId']),
-                    'sample_has_proprietaireId' => isset($sampleBooking['proprietaireId']),
-                    'sample_has_residence' => isset($sampleBooking['residence']),
-                    'sample_has_vehicle' => isset($sampleBooking['vehicle']),
-                    'sample_has_voiture' => isset($sampleBooking['voiture']),
-                    'sample_has_offer' => isset($sampleBooking['offer']),
-                    'sample_residence_keys' => isset($sampleBooking['residence']) && is_array($sampleBooking['residence']) ? array_keys($sampleBooking['residence']) : null,
-                    'sample_residence_proprietaireId' => isset($sampleBooking['residence']['proprietaireId']) ? $sampleBooking['residence']['proprietaireId'] : (isset($sampleBooking['residence']['ownerId']) ? $sampleBooking['residence']['ownerId'] : null),
-                ]);
-            }
-            
+
             // Calculer les statistiques AVANT le mapping
             $totalBookings = count($bookings);
             $confirmedBookings = 0;

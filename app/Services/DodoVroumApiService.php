@@ -881,6 +881,16 @@ class DodoVroumApiService
     }
 
     /**
+     * Récupérer les réservations des biens (résidences/véhicules/offres) du propriétaire connecté
+     * Endpoint: GET /api/bookings/my-properties-bookings
+     * Le filtrage par propriétaire est fait côté NestJS via le JWT — aucun ID à transmettre.
+     */
+    public function getMyPropertiesBookings(array $filters = []): array
+    {
+        return $this->get('bookings/my-properties-bookings', $filters);
+    }
+
+    /**
      * Approuver une réservation
      * Endpoint: PATCH /api/bookings/:id/approve
      * @return array{success: bool, message?: string}

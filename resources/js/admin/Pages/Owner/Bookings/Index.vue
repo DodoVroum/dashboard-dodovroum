@@ -89,14 +89,21 @@
     <!-- Tableau des réservations -->
     <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
       <div class="px-6 pt-5 pb-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-sm font-semibold text-slate-700">Toutes les réservations ({{ bookings.length }})</h2>
+        <h2 class="text-sm font-semibold text-slate-700">Toutes les réservations ({{ totalBookingsCount }})</h2>
         <p class="text-xs text-slate-500">
           Rafraichissement automatique toutes les 60s
         </p>
       </div>
 
-      <div v-if="bookings.length === 0" class="p-12 text-center">
+      <div v-if="totalBookingsCount === 0" class="p-12 text-center">
         <p class="text-slate-500">Aucune réservation trouvée</p>
+      </div>
+
+      <div v-else-if="bookings.length === 0" class="p-12 text-center">
+        <p class="text-slate-500">Cette page ne contient plus de réservation.</p>
+        <Link href="/owner/bookings" class="text-sm text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block">
+          Retourner à la première page →
+        </Link>
       </div>
 
       <table v-else class="w-full">
@@ -360,6 +367,11 @@ const props = defineProps<{
 
 const error = props.error || '';
 const bookings = computed(() => (Array.isArray(props.bookings) ? props.bookings : []));
+
+// Source de vérité unique pour le compteur affiché : le total global de la pagination
+// (identique à ce qu'affiche déjà le pied de tableau), pas la taille de la page courante
+// (`bookings.length`), qui ne reflète que les éléments de la page en cours.
+const totalBookingsCount = computed(() => props.pagination?.total ?? bookings.value.length);
 const now = ref(Date.now());
 let clockInterval: ReturnType<typeof setInterval> | null = null;
 let refreshInterval: ReturnType<typeof setInterval> | null = null;

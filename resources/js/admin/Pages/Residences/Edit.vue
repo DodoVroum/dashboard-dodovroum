@@ -229,14 +229,6 @@
             />
             <span class="text-sm font-medium text-slate-700">Résidence active</span>
           </label>
-          <label class="flex items-center">
-            <input
-              type="checkbox"
-              v-model="form.isVerified"
-              class="mr-2"
-            />
-            <span class="text-sm font-medium text-slate-700">Résidence vérifiée</span>
-          </label>
         </div>
       </div>
 
@@ -362,7 +354,6 @@ const props = defineProps<{
     localisation?: {};
     isActive?: boolean;
     available?: boolean;
-    isVerified?: boolean;
   };
 }>();
 
@@ -418,7 +409,6 @@ const form = useForm({
   images: normalizeImagesForForm(props.residence.images),
   amenities: normalizeAmenitiesForForm(props.residence.amenities || props.residence.commodites),
   isActive: props.residence.isActive ?? props.residence.available ?? true,
-  isVerified: props.residence.isVerified ?? false,
 });
 
 const availableAmenities = [

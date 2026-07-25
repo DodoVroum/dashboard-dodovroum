@@ -42,7 +42,61 @@
         </a>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <!-- Cartes (mobile, < lg) -->
+      <div v-if="residences.length > 0" class="lg:hidden divide-y divide-slate-100">
+        <MobileListCard
+          v-for="residence in residences"
+          :key="residence.id"
+          :clickable="false"
+          class="rounded-none border-0 shadow-none"
+        >
+          <template #media>
+            <img
+              v-if="getImage(residence) && !imageErrors[residence.id]"
+              :src="getImage(residence)!"
+              :alt="residence.title || residence.name || 'Résidence'"
+              class="w-full h-full object-cover grayscale"
+              @error="() => (imageErrors[residence.id] = true)"
+            />
+            <Building2 v-else class="w-6 h-6 text-slate-400 m-auto" />
+          </template>
+          <template #title>{{ residence.title || residence.name || 'Résidence sans nom' }}</template>
+          <template #subtitle>
+            {{ formatType(residence.type || residence.typeResidence) }} • {{ residence.bedrooms ?? 0 }} ch. • {{ residence.capacity ?? 0 }} pers.
+          </template>
+          <template #badge>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+              <Archive class="w-3 h-3" />
+              Archivé
+            </span>
+          </template>
+          <template #metric>{{ formatPrice(residence.pricePerNight || residence.price || 0) }} CFA</template>
+          <template #default>
+            <div class="flex items-center gap-2 pt-1">
+              <a
+                :href="`/owner/residences/${residence.id}`"
+                class="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                title="Voir"
+              >
+                <Eye class="w-4 h-4" />
+              </a>
+              <form :action="`/owner/residences/${residence.id}/reactivate`" method="POST" class="flex-1">
+                <input type="hidden" name="_token" :value="csrfToken()" />
+                <input type="hidden" name="_method" value="PATCH" />
+                <button
+                  type="submit"
+                  class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors min-h-[44px]"
+                >
+                  <RotateCcw class="w-3.5 h-3.5" />
+                  Réactiver
+                </button>
+              </form>
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+
+      <div v-if="residences.length > 0" class="hidden lg:block overflow-x-auto">
       <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
@@ -153,6 +207,7 @@ import { ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { Building2, Eye, Archive, RotateCcw, ChevronLeft } from 'lucide-vue-next';
 import Pagination from '../../../Components/Pagination.vue';
+import MobileListCard from '../../../Components/MobileListCard.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 
 defineOptions({ layout: OwnerLayout });

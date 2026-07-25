@@ -112,16 +112,100 @@
       </div>
     </form>
 
-    <!-- Tableau des résidences -->
-    <div class="bg-white border border-slate-200 rounded-xl table-scroll-wrap">
-      <div v-if="residences.length === 0 && !error" class="p-12 text-center">
-        <p class="text-slate-500">Aucune résidence trouvée</p>
-      </div>
-      <div v-if="residences.length === 0 && error" class="p-12 text-center">
-        <p class="text-red-600 font-medium">{{ error }}</p>
-      </div>
+    <!-- États vide / erreur -->
+    <div v-if="residences.length === 0" class="bg-white border border-slate-200 rounded-xl p-12 text-center">
+      <p v-if="!error" class="text-slate-500">Aucune résidence trouvée</p>
+      <p v-else class="text-red-600 font-medium">{{ error }}</p>
+    </div>
 
-      <table v-else class="w-full">
+    <template v-else>
+    <!-- Cartes (mobile, < lg) -->
+    <div class="lg:hidden space-y-3">
+      <MobileListCard
+        v-for="residence in residences"
+        :key="residence.id"
+        @click="goToResidence(residence)"
+      >
+        <template #media>
+          <img
+            v-if="getResidenceImage(residence) && !imageErrors[residence.id]"
+            :src="getStorageImageUrl(getResidenceImage(residence), 'residences')"
+            :alt="residence.title || residence.name || 'Résidence'"
+            class="w-full h-full object-cover"
+            @error="() => handleImageError(residence.id)"
+            @load="() => (imageErrors[residence.id] = false)"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center">
+            <Building2 class="w-6 h-6 text-slate-400" />
+          </div>
+        </template>
+        <template #title>{{ residence.title || residence.name || 'Résidence sans nom' }}</template>
+        <template #subtitle>
+          {{ formatType(residence.type || residence.typeResidence) }} • {{ residence.bedrooms ?? 0 }} ch. • {{ residence.capacity ?? 0 }} pers.
+        </template>
+        <template #badge>
+          <span
+            class="px-2 py-1 text-xs font-medium rounded-full"
+            :class="getStatusClass(residence.available ?? residence.status ?? 'available')"
+          >
+            {{ getStatusLabel(residence.available ?? residence.status ?? 'available') }}
+          </span>
+        </template>
+        <template #metric>{{ formatPrice(residence.pricePerNight || residence.price || 0) }} CFA</template>
+        <template #actions>
+          <div class="relative inline-block text-left" @click.stop>
+            <button
+              :ref="el => setButtonRef(residence.id, el)"
+              @click.stop="toggleMenu(residence.id)"
+              class="p-2 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition min-h-[44px] min-w-[44px]"
+              :class="{ 'bg-slate-100 text-slate-900': openMenus.has(residence.id) }"
+            >
+              <MoreVertical class="w-5 h-5" />
+            </button>
+            <Teleport to="body">
+              <div
+                v-if="openMenus.has(residence.id)"
+                class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50"
+                :style="getMenuStyle(residence.id)"
+              >
+                <div class="py-1">
+                  <Link
+                    :href="route('owner.residences.show', residence.id)"
+                    @click="closeMenu(residence.id)"
+                    class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                  >
+                    <Eye class="w-4 h-4" />
+                    Voir
+                  </Link>
+                  <Link
+                    v-if="residence.canEdit !== false"
+                    :href="route('owner.residences.edit', residence.id)"
+                    @click="closeMenu(residence.id)"
+                    class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                  >
+                    <Pencil class="w-4 h-4" />
+                    Modifier
+                  </Link>
+                  <button
+                    v-if="residence.canEdit !== false"
+                    type="button"
+                    @click.stop.prevent="deleteResidence(residence)"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </Teleport>
+          </div>
+        </template>
+      </MobileListCard>
+    </div>
+
+    <!-- Tableau des résidences (desktop, >= lg) -->
+    <div class="hidden lg:block bg-white border border-slate-200 rounded-xl table-scroll-wrap">
+      <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -270,15 +354,17 @@
           </tr>
         </tbody>
       </table>
-      
-      <!-- Pagination -->
+    </div>
+
+    <!-- Pagination (mobile + desktop) -->
+    <div v-if="pagination" class="bg-white border border-slate-200 rounded-xl overflow-hidden">
       <Pagination
-        v-if="pagination"
         :pagination="pagination"
         route-name="owner.residences.index"
         :filters="filters"
       />
     </div>
+    </template>
 
   </div>
 </template>
@@ -288,6 +374,7 @@ import { reactive, ref, onMounted, onUnmounted, Teleport } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { Eye, Pencil, Trash2, MoreVertical, Building2, Calendar, DollarSign, CheckCircle, Archive } from 'lucide-vue-next';
 import Pagination from '../../../Components/Pagination.vue';
+import MobileListCard from '../../../Components/MobileListCard.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
 

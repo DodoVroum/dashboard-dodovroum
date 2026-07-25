@@ -99,7 +99,91 @@
         <p class="text-sm text-slate-400 mt-2">Vous n'avez pas encore d'offres combinées.</p>
       </div>
 
-      <table v-else class="w-full">
+      <template v-else>
+      <!-- Cartes (mobile, < lg) -->
+      <div class="lg:hidden space-y-3 p-3">
+        <MobileListCard
+          v-for="offer in visibleOffers"
+          :key="offer.id"
+          @click="goToOffer(offer)"
+        >
+          <template #media>
+            <img
+              v-if="getOfferImage(offer) && !imageErrors[offer.id]"
+              :src="getStorageImageUrl(getOfferImage(offer))"
+              :alt="offer.title || offer.name || 'Offre'"
+              class="w-full h-full object-cover"
+              :class="isExpiredStatus(offer.status) ? 'grayscale' : ''"
+              @error="() => handleImageError(offer.id)"
+              @load="() => (imageErrors[offer.id] = false)"
+            />
+            <Package v-else class="w-6 h-6 text-slate-400 m-auto" />
+          </template>
+          <template #title>{{ offer.title || offer.name || 'Offre sans nom' }}</template>
+          <template #subtitle>{{ getResidenceName(offer) }} • {{ getVehicleName(offer) }}</template>
+          <template #badge>
+            <span v-if="isExpiredStatus(offer.status)"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">
+              Expiré
+            </span>
+            <span v-else class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full" :class="getStatusClass(offer.status)">
+              {{ getStatusLabel(offer.status) }}
+            </span>
+          </template>
+          <template #metric>{{ formatPrice(offer.discountedPrice || offer.price || 0) }} CFA</template>
+          <template #actions>
+            <div class="relative inline-block text-left" @click.stop>
+              <button
+                :ref="el => setButtonRef(offer.id, el)"
+                @click.stop="toggleMenu(offer.id)"
+                class="p-2 rounded-md transition min-h-[44px] min-w-[44px]"
+                :class="openMenus.has(offer.id) ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
+              >
+                <MoreVertical class="w-5 h-5" />
+              </button>
+              <Teleport to="body">
+                <div
+                  v-if="openMenus.has(offer.id)"
+                  class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50"
+                  :style="getMenuStyle(offer.id)"
+                  @click.stop
+                >
+                  <div class="py-1">
+                    <Link
+                      :href="`/owner/combo-offers/${offer.id}`"
+                      @click="closeMenu(offer.id)"
+                      class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      <Eye class="w-4 h-4" />
+                      Voir
+                    </Link>
+                    <template v-if="!isExpiredStatus(offer.status) && offer.canEdit !== false">
+                      <Link
+                        :href="`/owner/combo-offers/${offer.id}/edit`"
+                        @click="closeMenu(offer.id)"
+                        class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil class="w-4 h-4" />
+                        Modifier
+                      </Link>
+                      <form :action="`/owner/combo-offers/${offer.id}`" method="POST" @submit="confirmAndSubmit">
+                        <input type="hidden" name="_token" :value="csrfToken()" />
+                        <input type="hidden" name="_method" value="DELETE" />
+                        <button type="submit" class="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                          <Trash2 class="w-4 h-4" />
+                          Supprimer
+                        </button>
+                      </form>
+                    </template>
+                  </div>
+                </div>
+              </Teleport>
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+
+      <table class="hidden lg:table w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Offre</th>
@@ -275,6 +359,7 @@
           </tr>
         </tbody>
       </table>
+      </template>
     </div>
 
     <!-- Pagination -->
@@ -294,6 +379,7 @@ import { reactive, computed, ref, onMounted, onUnmounted } from 'vue';
 import { Eye, Pencil, Trash2, MoreVertical, Plus, Package, Calendar, DollarSign, TrendingUp } from 'lucide-vue-next';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import Pagination from '../../../Components/Pagination.vue';
+import MobileListCard from '../../../Components/MobileListCard.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
 import { formatDateRange } from '../../../utils/dates';
 

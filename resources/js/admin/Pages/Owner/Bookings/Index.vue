@@ -106,7 +106,110 @@
         </Link>
       </div>
 
-      <table v-else class="w-full">
+      <template v-else>
+      <!-- Cartes (mobile, < lg) — variante dense : pas de commission ni montant propriétaire, réservés au détail -->
+      <div class="lg:hidden divide-y divide-slate-100">
+        <MobileListCard
+          v-for="booking in bookings"
+          :key="booking.id"
+          dense
+          @click="goToBooking(booking.id)"
+          class="rounded-none border-0 shadow-none"
+        >
+          <template #media>
+            <img
+              v-if="booking.propertyImage && !imageErrors[booking.id]"
+              :src="getStorageImageUrl(booking.propertyImage)"
+              :alt="booking.property || booking.propertyName || 'Propriété'"
+              class="w-full h-full object-cover"
+              @error="() => handleImageError(booking.id)"
+              @load="() => (imageErrors[booking.id] = false)"
+            />
+            <component v-else :is="getPropertyIcon(booking.bookingType)" class="w-6 h-6 text-slate-400 m-auto" />
+          </template>
+          <template #title>{{ booking.customer || booking.customerName || 'Client inconnu' }}</template>
+          <template #subtitle>
+            {{ booking.property || booking.propertyName || 'Non spécifié' }}
+            <span v-if="booking.bookingType"> • {{ getBookingTypeLabel(booking.bookingType) }}</span>
+          </template>
+          <template #badge>
+            <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getStatusClass(booking.status)">
+              {{ formatStatus(booking.status) }}
+            </span>
+          </template>
+          <template #metric>
+            <span :class="getRemaining(booking) > 0 ? 'text-amber-600' : 'text-slate-400'">
+              {{ formatPrice(getRemaining(booking)) }} CFA
+            </span>
+          </template>
+          <template #actions>
+            <div class="relative inline-block text-left" @click.stop>
+              <button
+                :ref="el => setButtonRef(booking.id, el)"
+                type="button"
+                @click.stop="toggleActionMenu(booking.id)"
+                class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[44px] min-w-[44px]"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              <Teleport to="body">
+                <div
+                  v-if="activeMenuId === booking.id"
+                  class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200"
+                  :style="getMenuStyle(booking.id)"
+                  @click.stop
+                  style="z-index: 999999 !important;"
+                >
+                  <div class="py-1">
+                    <Link
+                      :href="`/owner/bookings/${booking.id}`"
+                      class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                      @click="closeActionMenu"
+                    >
+                      Voir les détails
+                    </Link>
+                    <template v-if="canApproveOrReject(booking.status)">
+                      <div class="border-t border-slate-200 my-1"></div>
+                      <button
+                        @click="approveBooking(booking.id)"
+                        :disabled="!canConfirmBooking(booking)"
+                        class="w-full text-left px-4 py-2 text-sm transition-colors font-medium"
+                        :class="canConfirmBooking(booking) ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 bg-slate-100 cursor-not-allowed'"
+                      >
+                        {{ isPaidStatus(booking.status, booking.paymentStatus) ? '✅ Confirmer la réservation' : '💳 En attente de paiement' }}
+                      </button>
+                      <button
+                        @click="rejectBooking(booking.id)"
+                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                      >
+                        ❌ Rejeter
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </Teleport>
+            </div>
+          </template>
+          <template #default>
+            <div class="text-xs text-slate-500">
+              {{ booking.dates || formatDateRange(booking.startDate, booking.endDate) }}
+            </div>
+            <button
+              v-if="canConfirmBooking(booking)"
+              type="button"
+              @click.stop="approveBooking(booking.id)"
+              class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2.5 rounded-lg font-medium transition-all shadow-sm text-sm min-h-[44px]"
+            >
+              <CheckCircle class="w-4 h-4" />
+              Confirmer la réservation
+            </button>
+          </template>
+        </MobileListCard>
+      </div>
+
+      <table class="hidden lg:table w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -320,7 +423,8 @@
           </tr>
         </tbody>
       </table>
-      
+      </template>
+
       <!-- Pagination -->
       <Pagination
         v-if="pagination && pagination.total > 0"
@@ -338,6 +442,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { Teleport } from 'vue';
 import { Calendar, CheckCircle, DollarSign, TrendingUp, Building2, Truck, Package } from 'lucide-vue-next';
 import Pagination from '../../../Components/Pagination.vue';
+import MobileListCard from '../../../Components/MobileListCard.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
 import { formatDateRange } from '../../../utils/dates';

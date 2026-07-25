@@ -35,7 +35,7 @@
     <!-- Navigation -->
     <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
       <Link
-        v-for="item in props.items"
+        v-for="item in displayedItems"
         :key="item.href"
         :href="item.href"
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer min-h-[44px] touch-manipulation relative"
@@ -82,10 +82,21 @@ import type { Component } from 'vue';
 const props = withDefaults(
   defineProps<{
     items: { label: string; href: string; icon: Component }[];
+    // Sous-ensemble affiché dans le drawer mobile uniquement (ex: items déjà présents
+    // dans une BottomNavBar qu'on ne veut pas dupliquer). Le rendu statique desktop
+    // utilise toujours `items` en entier, quel que soit `mobileItems`.
+    mobileItems?: { label: string; href: string; icon: Component }[];
     open?: boolean;
   }>(),
   { open: false }
 );
+
+const displayedItems = computed(() => {
+  if (isMobile.value && props.mobileItems) {
+    return props.mobileItems;
+  }
+  return props.items;
+});
 
 const emit = defineEmits<{
   close: [];

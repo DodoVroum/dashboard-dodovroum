@@ -130,7 +130,81 @@
         </Link>
       </div>
 
-      <table v-else class="w-full">
+      <template v-else>
+      <!-- Cartes (mobile, < lg) -->
+      <div class="lg:hidden space-y-3 p-3">
+        <MobileListCard
+          v-for="vehicle in vehicles"
+          :key="vehicle.id"
+          @click="goToVehicle(vehicle.id)"
+        >
+          <template #media>
+            <img
+              v-if="getVehicleImage(vehicle) && !imageErrors[vehicle.id]"
+              :src="getStorageImageUrl(getVehicleImage(vehicle), 'vehicles')"
+              :alt="vehicle.name || 'Véhicule'"
+              class="w-full h-full object-cover"
+              @error="() => handleImageError(vehicle.id)"
+              @load="() => (imageErrors[vehicle.id] = false)"
+            />
+            <component v-else :is="getVehicleIcon(vehicle.type)" class="w-6 h-6 text-slate-400 m-auto" />
+          </template>
+          <template #title>{{ vehicle.name || `${vehicle.brand || ''} ${vehicle.model || ''}`.trim() || 'Véhicule sans nom' }}</template>
+          <template #subtitle>{{ formatType(vehicle.type) }} • {{ vehicle.year || 'N/A' }} • {{ vehicle.seats || 0 }} places</template>
+          <template #badge>
+            <span
+              class="px-2 py-1 text-xs font-medium rounded-full"
+              :class="getStatusClass(vehicle.available ?? vehicle.status ?? 'available')"
+            >
+              {{ getStatusLabel(vehicle.available ?? vehicle.status ?? 'available') }}
+            </span>
+          </template>
+          <template #metric>{{ formatPrice(vehicle.pricePerDay || vehicle.price_per_day || vehicle.price || 0) }} CFA/j</template>
+          <template #actions>
+            <div class="relative" @click.stop>
+              <button
+                @click="toggleMenu(vehicle.id)"
+                class="p-2 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition min-h-[44px] min-w-[44px]"
+                :class="{ 'bg-slate-100 text-slate-900': openMenus.has(vehicle.id) }"
+              >
+                <MoreVertical class="w-5 h-5" />
+              </button>
+              <div
+                v-if="openMenus.has(vehicle.id)"
+                class="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-10 py-1"
+              >
+                <Link
+                  :href="`/owner/vehicles/${vehicle.id}`"
+                  @click="closeMenu(vehicle.id)"
+                  class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <Eye class="w-4 h-4" />
+                  Voir
+                </Link>
+                <Link
+                  v-if="vehicle.canEdit !== false"
+                  :href="`/owner/vehicles/${vehicle.id}/edit`"
+                  @click="closeMenu(vehicle.id)"
+                  class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <Pencil class="w-4 h-4" />
+                  Modifier
+                </Link>
+                <button
+                  v-if="vehicle.canEdit !== false"
+                  @click="confirmDelete(vehicle); closeMenu(vehicle.id)"
+                  class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <Trash2 class="w-4 h-4" />
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+
+      <table class="hidden lg:table w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -276,7 +350,8 @@
           </tr>
         </tbody>
       </table>
-      
+      </template>
+
       <!-- Pagination -->
       <Pagination
         v-if="pagination && vehicles.length > 0"
@@ -292,6 +367,7 @@
 import { reactive, ref, onMounted, onUnmounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import Pagination from '../../../Components/Pagination.vue';
+import MobileListCard from '../../../Components/MobileListCard.vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
 import { Truck, Car, Bike, MoreVertical, Eye, Pencil, Trash2, Calendar, DollarSign, CheckCircle, Archive } from 'lucide-vue-next';

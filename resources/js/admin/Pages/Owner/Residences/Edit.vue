@@ -13,10 +13,9 @@
       </Link>
     </div>
 
-    <form @submit.prevent="submit" class="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+    <form @submit.prevent="submit" class="space-y-4">
       <!-- Informations de base -->
-      <div>
-        <h2 class="text-lg font-semibold mb-4">Informations de base</h2>
+      <CollapsibleSection title="Informations de base" default-open>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">
@@ -114,12 +113,10 @@
             <p v-if="errors.pricePerNight" class="text-red-600 text-sm mt-1">{{ errors.pricePerNight }}</p>
           </div>
         </div>
-      </div>
-
+      </CollapsibleSection>
 
       <!-- Équipements -->
-      <div>
-        <h2 class="text-lg font-semibold mb-4">Équipements</h2>
+      <CollapsibleSection title="Équipements">
         <div class="space-y-2">
           <div class="flex flex-wrap gap-2">
             <label
@@ -145,11 +142,10 @@
             class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
-      </div>
+      </CollapsibleSection>
 
       <!-- Images -->
-      <div>
-        <h2 class="text-lg font-semibold mb-4">Images</h2>
+      <CollapsibleSection title="Images">
         <div class="space-y-4">
           <!-- Upload de fichier -->
           <div>
@@ -215,11 +211,10 @@
           </div>
 
         </div>
-      </div>
+      </CollapsibleSection>
 
       <!-- Statuts -->
-      <div>
-        <h2 class="text-lg font-semibold mb-4">Statuts</h2>
+      <CollapsibleSection title="Statuts">
         <div class="space-y-3">
           <label class="flex items-center">
             <input
@@ -230,61 +225,42 @@
             <span class="text-sm font-medium text-slate-700">Résidence active</span>
           </label>
         </div>
-      </div>
+      </CollapsibleSection>
 
       <!-- Caractéristiques -->
-      <div>
-        <h2 class="text-lg font-semibold mb-4">Caractéristiques</h2>
+      <CollapsibleSection title="Caractéristiques">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">
-              Nombre de chambres *
-            </label>
-            <input
-              v-model.number="form.bedrooms"
-              type="number"
-              required
-              min="0"
-              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            <NumberStepper
+              v-model="form.bedrooms"
+              label="Nombre de chambres *"
+              :min="0"
             />
             <p v-if="errors.bedrooms" class="text-red-600 text-sm mt-1">{{ errors.bedrooms }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">
-              Nombre de salles de bain *
-            </label>
-            <input
-              v-model.number="form.bathrooms"
-              type="number"
-              required
-              min="0"
-              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            <NumberStepper
+              v-model="form.bathrooms"
+              label="Nombre de salles de bain *"
+              :min="0"
             />
             <p v-if="errors.bathrooms" class="text-red-600 text-sm mt-1">{{ errors.bathrooms }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">
-              Capacité (personnes) *
-            </label>
-            <input
-              v-model.number="form.capacity"
-              type="number"
-              required
-              min="1"
-              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            <NumberStepper
+              v-model="form.capacity"
+              label="Capacité (personnes) *"
+              :min="1"
             />
             <p v-if="errors.capacity" class="text-red-600 text-sm mt-1">{{ errors.capacity }}</p>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       <!-- Description -->
-      <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">
-          Description
-        </label>
+      <CollapsibleSection title="Description">
         <textarea
           v-model="form.description"
           rows="4"
@@ -296,10 +272,10 @@
           <p v-if="errors.description" class="text-red-600 text-sm">{{ errors.description }}</p>
           <p class="text-xs text-slate-500 ml-auto">{{ form.description?.length || 0 }}/500 caractères</p>
         </div>
-      </div>
+      </CollapsibleSection>
 
       <!-- Actions -->
-      <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+      <div class="flex justify-end gap-3 bg-white border border-slate-200 rounded-xl p-4">
         <Link
           href="/owner/residences"
           class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
@@ -324,6 +300,8 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
+import CollapsibleSection from '../../../Components/CollapsibleSection.vue';
+import NumberStepper from '../../../Components/NumberStepper.vue';
 
 defineOptions({
   layout: OwnerLayout,

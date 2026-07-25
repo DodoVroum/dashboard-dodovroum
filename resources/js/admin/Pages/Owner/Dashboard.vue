@@ -44,48 +44,69 @@
         <Calendar class="w-12 h-12 text-slate-300 mx-auto mb-2" />
         <p class="text-slate-500">Aucune réservation récente</p>
       </div>
-      <div v-else class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Bien</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dates</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Statut</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="booking in recentBookings" :key="booking.id" class="hover:bg-slate-50">
-              <td class="px-4 py-3 text-sm font-medium text-slate-900">
-                {{ booking.customer }}
-              </td>
-              <td class="px-4 py-3 text-sm text-slate-600">
-                {{ booking.property }}
-              </td>
-              <td class="px-4 py-3 text-sm text-slate-600">
-                {{ booking.dates }}
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="text-xs px-3 py-1 rounded-full font-medium"
-                  :class="getStatusClass(booking.status)"
-                >
-                  {{ formatStatus(booking.status) }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <Link
-                  :href="`/owner/bookings/${booking.id}`"
-                  class="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  Voir détails →
-                </Link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <template v-else>
+        <!-- Cartes (mobile, < lg) -->
+        <div class="lg:hidden space-y-3">
+          <MobileListCard
+            v-for="booking in recentBookings"
+            :key="booking.id"
+            dense
+            @click="goToBooking(booking.id)"
+          >
+            <template #title>{{ booking.customer }}</template>
+            <template #subtitle>{{ booking.property }} • {{ booking.dates }}</template>
+            <template #badge>
+              <span class="text-xs px-3 py-1 rounded-full font-medium" :class="getStatusClass(booking.status)">
+                {{ formatStatus(booking.status) }}
+              </span>
+            </template>
+          </MobileListCard>
+        </div>
+
+        <!-- Tableau (desktop, >= lg) -->
+        <div class="hidden lg:block overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Bien</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dates</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Statut</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="booking in recentBookings" :key="booking.id" class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-sm font-medium text-slate-900">
+                  {{ booking.customer }}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-600">
+                  {{ booking.property }}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-600">
+                  {{ booking.dates }}
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="text-xs px-3 py-1 rounded-full font-medium"
+                    :class="getStatusClass(booking.status)"
+                  >
+                    {{ formatStatus(booking.status) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <Link
+                    :href="`/owner/bookings/${booking.id}`"
+                    class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    Voir détails →
+                  </Link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </section>
 
     <!-- Résumé des biens et Revenus -->
@@ -291,8 +312,9 @@
 </template>
 
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import StatsCard from '../../Components/StatsCard.vue';
+import MobileListCard from '../../Components/MobileListCard.vue';
 import OwnerLayout from '../../Components/Layouts/OwnerLayout.vue';
 import { Building2, Truck, Calendar, Clock, DollarSign, AlertCircle, Package, Mail } from 'lucide-vue-next';
 
@@ -353,6 +375,10 @@ const props = defineProps<{
     href: string;
   }>;
 }>();
+
+const goToBooking = (id: string | number) => {
+  router.visit(`/owner/bookings/${id}`);
+};
 
 // Fonctions de formatage
 const formatNumber = (value: number | string): string => {

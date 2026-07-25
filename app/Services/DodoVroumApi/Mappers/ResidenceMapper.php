@@ -18,18 +18,19 @@ class ResidenceMapper
 
         $isAvailable = $residence['isAvailable'] ?? $available;
         $apiStatus = strtolower(trim($residence['status'] ?? ''));
-        
+        // isActive reflète la case "Résidence active" (seule bascule de statut réellement
+        // pilotable depuis l'admin/owner). isVerified est un indicateur de vérification
+        // distinct, à ne pas utiliser pour déduire la disponibilité.
+        $apiIsActive = $residence['isActive'] ?? null;
+
         // Déterminer le statut pour le frontend
         $frontendStatus = 'unavailable'; // Default
         if (!empty($apiStatus)) {
             $frontendStatus = $apiStatus;
         } elseif ($isAvailable !== null) {
             $frontendStatus = $isAvailable ? 'available' : 'occupied';
-        } else {
-            $isVerified = $residence['isVerified'] ?? null;
-            if ($isVerified !== null) {
-                $frontendStatus = $isVerified ? 'available' : 'unavailable';
-            }
+        } elseif ($apiIsActive !== null) {
+            $frontendStatus = $apiIsActive ? 'available' : 'unavailable';
         }
 
         return [
@@ -57,10 +58,10 @@ class ResidenceMapper
             'commodites' => $residence['commodites'] ?? $residence['amenities'] ?? [],
             'latitude' => $residence['localisation']['latitude'] ?? $residence['latitude'] ?? null,
             'longitude' => $residence['localisation']['longitude'] ?? $residence['longitude'] ?? null,
-            'isActive' => $residence['isActive'] ?? $residence['isVerified'] ?? true,
+            'isActive' => $apiIsActive ?? true,
             'isVerified' => $residence['isVerified'] ?? false,
-            'isAvailable' => $isAvailable ?? ($residence['isVerified'] ?? true),
-            'available' => $isAvailable ?? ($residence['isVerified'] ?? true),
+            'isAvailable' => $isAvailable ?? ($apiIsActive ?? true),
+            'available' => $isAvailable ?? ($apiIsActive ?? true),
             'status' => $frontendStatus,
             'notation' => $residence['notation'] ?? null,
             'owner' => $residence['proprietaire'] ?? $residence['owner'] ?? $residence['user'] ?? null,

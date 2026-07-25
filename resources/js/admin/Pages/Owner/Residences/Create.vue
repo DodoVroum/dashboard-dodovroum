@@ -234,14 +234,6 @@
             />
             <span class="text-sm font-medium text-slate-700">Résidence active</span>
           </label>
-          <label class="flex items-center">
-            <input
-              type="checkbox"
-              v-model="form.isVerified"
-              class="mr-2"
-            />
-            <span class="text-sm font-medium text-slate-700">Résidence vérifiée</span>
-          </label>
         </div>
       </div>
 

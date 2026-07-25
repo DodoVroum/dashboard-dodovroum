@@ -155,23 +155,23 @@
         <template #actions>
           <div class="relative inline-block text-left" @click.stop>
             <button
-              :ref="el => setButtonRef(residence.id, el)"
-              @click.stop="toggleMenu(residence.id)"
+              :ref="el => setButtonRef(mobileMenuKey(residence.id), el)"
+              @click.stop="toggleMenu(mobileMenuKey(residence.id))"
               class="p-2 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition min-h-[44px] min-w-[44px]"
-              :class="{ 'bg-slate-100 text-slate-900': openMenus.has(residence.id) }"
+              :class="{ 'bg-slate-100 text-slate-900': openMenus.has(mobileMenuKey(residence.id)) }"
             >
               <MoreVertical class="w-5 h-5" />
             </button>
             <Teleport to="body">
               <div
-                v-if="openMenus.has(residence.id)"
+                v-if="openMenus.has(mobileMenuKey(residence.id))"
                 class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50"
-                :style="getMenuStyle(residence.id)"
+                :style="getMenuStyle(mobileMenuKey(residence.id))"
               >
                 <div class="py-1">
                   <Link
                     :href="route('owner.residences.show', residence.id)"
-                    @click="closeMenu(residence.id)"
+                    @click="closeMenu(mobileMenuKey(residence.id))"
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                   >
                     <Eye class="w-4 h-4" />
@@ -180,7 +180,7 @@
                   <Link
                     v-if="residence.canEdit !== false"
                     :href="route('owner.residences.edit', residence.id)"
-                    @click="closeMenu(residence.id)"
+                    @click="closeMenu(mobileMenuKey(residence.id))"
                     class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                   >
                     <Pencil class="w-4 h-4" />
@@ -445,6 +445,12 @@ const resetFilters = () => {
 
 const openMenus = ref(new Set<string | number>());
 const buttonRefs = ref<Map<string | number, HTMLElement>>(new Map());
+
+// La vue carte (mobile) et le tableau (desktop) sont montés simultanément dans le DOM
+// (l'un est juste masqué en CSS selon le breakpoint) : sans cette clé distincte, les deux
+// boutons "..." partageraient la même entrée dans buttonRefs/openMenus et se marcheraient
+// dessus (position calculée sur l'élément caché, menu des deux vues ouvert en même temps).
+const mobileMenuKey = (id: string | number): string => `mobile-${id}`;
 
 const goToResidence = (residence: (typeof props.residences)[0]) => {
   router.visit(`/owner/residences/${residence.id}`);

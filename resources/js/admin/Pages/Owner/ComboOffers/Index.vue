@@ -134,24 +134,24 @@
           <template #actions>
             <div class="relative inline-block text-left" @click.stop>
               <button
-                :ref="el => setButtonRef(offer.id, el)"
-                @click.stop="toggleMenu(offer.id)"
+                :ref="el => setButtonRef(mobileMenuKey(offer.id), el)"
+                @click.stop="toggleMenu(mobileMenuKey(offer.id))"
                 class="p-2 rounded-md transition min-h-[44px] min-w-[44px]"
-                :class="openMenus.has(offer.id) ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
+                :class="openMenus.has(mobileMenuKey(offer.id)) ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
               >
                 <MoreVertical class="w-5 h-5" />
               </button>
               <Teleport to="body">
                 <div
-                  v-if="openMenus.has(offer.id)"
+                  v-if="openMenus.has(mobileMenuKey(offer.id))"
                   class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50"
-                  :style="getMenuStyle(offer.id)"
+                  :style="getMenuStyle(mobileMenuKey(offer.id))"
                   @click.stop
                 >
                   <div class="py-1">
                     <Link
                       :href="`/owner/combo-offers/${offer.id}`"
-                      @click="closeMenu(offer.id)"
+                      @click="closeMenu(mobileMenuKey(offer.id))"
                       class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                     >
                       <Eye class="w-4 h-4" />
@@ -160,7 +160,7 @@
                     <template v-if="!isExpiredStatus(offer.status) && offer.canEdit !== false">
                       <Link
                         :href="`/owner/combo-offers/${offer.id}/edit`"
-                        @click="closeMenu(offer.id)"
+                        @click="closeMenu(mobileMenuKey(offer.id))"
                         class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                       >
                         <Pencil class="w-4 h-4" />
@@ -583,6 +583,11 @@ const getStatusLabel = (status?: string | null): string => {
 
 // Gestion du menu d'actions
 const openMenus = ref(new Set<string | number>());
+
+// La carte mobile et la ligne de tableau desktop de la même offre sont montées en même
+// temps dans le DOM (l'une est juste masquée en CSS) : sans cette clé distincte, les deux
+// boutons "..." partageraient openMenus/buttonRefs et se marcheraient dessus.
+const mobileMenuKey = (id: string | number): string => `mobile-${id}`;
 const buttonRefs = ref<Map<string | number, HTMLElement>>(new Map());
 
 const goToOffer = (offer: (typeof props.comboOffers)[0]) => {

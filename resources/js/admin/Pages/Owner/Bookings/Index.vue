@@ -145,9 +145,9 @@
           <template #actions>
             <div class="relative inline-block text-left" @click.stop>
               <button
-                :ref="el => setButtonRef(booking.id, el)"
+                :ref="el => setButtonRef(mobileMenuKey(booking.id), el)"
                 type="button"
-                @click.stop="toggleActionMenu(booking.id)"
+                @click.stop="toggleActionMenu(mobileMenuKey(booking.id))"
                 class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[44px] min-w-[44px]"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,9 +156,9 @@
               </button>
               <Teleport to="body">
                 <div
-                  v-if="activeMenuId === booking.id"
+                  v-if="activeMenuId === mobileMenuKey(booking.id)"
                   class="fixed w-48 bg-white rounded-lg shadow-xl border border-slate-200"
-                  :style="getMenuStyle(booking.id)"
+                  :style="getMenuStyle(mobileMenuKey(booking.id))"
                   @click.stop
                   style="z-index: 999999 !important;"
                 >
@@ -546,6 +546,11 @@ const formatNumber = (num: number): string => {
 
 // Gestion du menu d'actions
 const activeMenuId = ref<string | number | null>(null);
+
+// La carte mobile et la ligne de tableau desktop du même booking sont montées en même
+// temps dans le DOM (l'une est juste masquée en CSS) : sans cette clé distincte, les deux
+// boutons "..." partageraient activeMenuId/buttonRefs et se marcheraient dessus.
+const mobileMenuKey = (id: string | number): string => `mobile-${id}`;
 const buttonRefs = ref<Record<string | number, HTMLElement | null>>({});
 
 const setButtonRef = (id: string | number, el: HTMLElement | null) => {

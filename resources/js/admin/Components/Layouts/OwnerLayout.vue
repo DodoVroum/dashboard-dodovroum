@@ -39,14 +39,14 @@ const navItems = computed(() => [
 const bottomNavItems = computed(() => [
   { label: 'Accueil', href: '/owner/dashboard', icon: Home },
   { label: 'Résidences', href: '/owner/residences', icon: Building2 },
+  { label: 'Véhicules', href: '/owner/vehicles', icon: Truck },
   { label: 'Réservations', href: '/owner/bookings', icon: Calendar },
-  { label: 'Finances', href: '/owner/revenue', icon: Wallet },
 ]);
 
 // Entrées reléguées dans le tiroir "Plus" sur mobile, pour ne pas dupliquer
 // celles déjà visibles dans bottomNavItems.
 const moreNavItems = computed(() => [
-  { label: 'Mes véhicules', href: '/owner/vehicles', icon: Truck },
+  { label: 'Finances', href: '/owner/revenue', icon: Wallet },
   { label: 'Mes offres', href: '/owner/combo-offers', icon: Package },
 ]);
 </script>

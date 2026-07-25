@@ -51,21 +51,25 @@
             <Pencil class="w-4 h-4 shrink-0" />
             Modifier
           </Link>
-          <button
-            type="button"
-            @click="toggleActionsMenu"
-            class="min-h-[44px] min-w-[44px] p-2 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center justify-center touch-manipulation relative"
-            aria-label="Actions"
-          >
-            <MoreVertical class="w-5 h-5 text-slate-600" />
+          <div class="relative">
+            <button
+              type="button"
+              @click.stop="toggleActionsMenu"
+              class="min-h-[44px] min-w-[44px] p-2 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center justify-center touch-manipulation"
+              aria-label="Actions"
+            >
+              <MoreVertical class="w-5 h-5 text-slate-600" />
+            </button>
             <div
               v-if="showActionsMenu"
               class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1"
+              @click.stop
             >
               <a
                 :href="`/vehicles/${vehicle?.id}`"
                 target="_blank"
                 class="block px-4 py-2.5 min-h-[44px] text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                @click="showActionsMenu = false"
               >
                 <Eye class="w-4 h-4 shrink-0" />
                 Voir côté client
@@ -83,7 +87,7 @@
                 </button>
               </form>
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </div>
@@ -393,7 +397,7 @@
 
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import AvailabilityCalendar from '../../../Components/AvailabilityCalendar.vue';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
@@ -484,6 +488,20 @@ const imageErrors = ref<Record<number, boolean>>({});
 const toggleActionsMenu = () => {
   showActionsMenu.value = !showActionsMenu.value;
 };
+
+const handleClickOutsideActionsMenu = (event: MouseEvent) => {
+  if (showActionsMenu.value && !(event.target as HTMLElement).closest('.relative')) {
+    showActionsMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutsideActionsMenu);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutsideActionsMenu);
+});
 
 const deleteVehicle = () => {
   if (!props.vehicle?.id) return;

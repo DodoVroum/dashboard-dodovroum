@@ -134,6 +134,26 @@
               <span>{{ amenity }}</span>
             </label>
           </div>
+
+          <!-- Équipements personnalisés ajoutés (absents de la liste prédéfinie ci-dessus) -->
+          <div v-if="customAmenities.length > 0" class="flex flex-wrap gap-2">
+            <span
+              v-for="amenity in customAmenities"
+              :key="amenity"
+              class="inline-flex items-center gap-1.5 pl-3 pr-2 py-2 bg-blue-50 border border-blue-500 text-blue-700 rounded-lg text-sm"
+            >
+              {{ amenity }}
+              <button
+                type="button"
+                @click="removeAmenity(amenity)"
+                class="p-0.5 rounded-full hover:bg-blue-100 min-h-[20px] min-w-[20px] flex items-center justify-center"
+                :aria-label="`Retirer ${amenity}`"
+              >
+                ×
+              </button>
+            </span>
+          </div>
+
           <div class="flex gap-2">
             <input
               type="text"
@@ -305,7 +325,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import { getStorageImageUrl } from '../../../utils/imageUrl';
@@ -393,6 +413,17 @@ const addAmenity = () => {
     form.amenities.push(newAmenity.value.trim());
     newAmenity.value = '';
   }
+};
+
+// Équipements ajoutés via le champ texte, absents de la liste de cases à cocher
+// prédéfinie ci-dessus : sans ça, ils étaient bien envoyés au serveur mais
+// invisibles à l'écran.
+const customAmenities = computed(() =>
+  form.amenities.filter((amenity) => !availableAmenities.includes(amenity))
+);
+
+const removeAmenity = (amenity: string) => {
+  form.amenities = form.amenities.filter((a) => a !== amenity);
 };
 
 const handleFileUpload = async (event: Event) => {

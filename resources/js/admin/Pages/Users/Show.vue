@@ -588,30 +588,50 @@
       </div>
     </div>
 
-    <!-- Modal pour afficher les images en grand -->
+    <!-- Modal pour afficher les images en grand, avec zoom -->
     <div
       v-if="imageModal.open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+      class="fixed inset-0 z-50 flex flex-col bg-black bg-opacity-90"
       role="dialog"
       aria-modal="true"
       aria-label="Image agrandie"
     >
-      <div class="relative max-w-4xl max-h-[90vh] p-4" @click.stop>
-        <button
-          @click="closeImageModal"
-          class="absolute top-2 right-2 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+      <div class="flex items-center justify-between gap-3 p-3 shrink-0">
+        <p v-if="imageModal.title" class="text-white text-sm truncate">{{ imageModal.title }}</p>
+        <div class="flex items-center gap-2 ml-auto shrink-0">
+          <button
+            type="button"
+            @click="toggleImageZoom"
+            class="text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
+            :aria-label="imageZoomed ? 'Dézoomer' : 'Zoomer'"
+          >
+            <ZoomOut v-if="imageZoomed" class="w-5 h-5" />
+            <ZoomIn v-else class="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            @click="closeImageModal"
+            class="text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
+            aria-label="Fermer"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div
+        class="flex-1 min-h-0 overflow-auto flex items-center justify-center p-4"
+        :class="imageZoomed ? '!items-start !justify-start cursor-zoom-out' : 'cursor-zoom-in'"
+        @click.self="closeImageModal"
+      >
         <img
           v-if="imageModal.src"
           :src="imageModal.src"
           :alt="imageModal.title"
-          class="max-w-full max-h-[90vh] rounded-lg"
+          @click="toggleImageZoom"
+          :class="imageZoomed
+            ? 'max-w-none w-auto h-auto scale-[2] md:scale-[2.5] origin-top-left rounded-lg select-none'
+            : 'max-w-full max-h-full rounded-lg select-none'"
         />
-        <p v-if="imageModal.title" class="text-white text-center mt-2">{{ imageModal.title }}</p>
       </div>
     </div>
 
@@ -664,7 +684,7 @@ import { computed, ref } from 'vue';
 import { getStorageImageUrl } from '../../utils/imageUrl';
 import { formatDateTime, formatDateRange } from '../../utils/dates';
 import StatsCard from '../../Components/StatsCard.vue';
-import { Calendar, Wallet, CreditCard, AlertCircle, Building2, Car } from 'lucide-vue-next';
+import { Calendar, Wallet, CreditCard, AlertCircle, Building2, Car, ZoomIn, ZoomOut, X } from 'lucide-vue-next';
 
 const props = defineProps<{
   user: {
@@ -935,7 +955,10 @@ const imageModal = ref<{ open: boolean; src: string | null; title: string }>({
   title: '',
 });
 
+const imageZoomed = ref(false);
+
 const openImageModal = (src: string, title: string) => {
+  imageZoomed.value = false;
   imageModal.value = {
     open: true,
     src,
@@ -949,6 +972,11 @@ const closeImageModal = () => {
     src: null,
     title: '',
   };
+  imageZoomed.value = false;
+};
+
+const toggleImageZoom = () => {
+  imageZoomed.value = !imageZoomed.value;
 };
 
 // Gestion de la vérification d'identité

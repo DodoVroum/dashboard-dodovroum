@@ -2215,6 +2215,19 @@ class DodoVroumApiService
     }
 
     /**
+     * Récupérer les documents de vérification d'identité d'un utilisateur précis.
+     * L'API NestJS stocke ces données dans une table dédiée (identity_verifications),
+     * jamais dans les champs identityPhoto* renvoyés par GET /users/:id.
+     * Endpoint: GET /api/identity-verification/admin/user/:userId
+     */
+    public function getUserIdentityVerification(string $userId): ?array
+    {
+        $result = $this->get("identity-verification/admin/user/{$userId}");
+
+        return !empty($result) ? $result : null;
+    }
+
+    /**
      * Récupérer les types de véhicules disponibles depuis l'API
      */
     public function getVehicleTypes(): array

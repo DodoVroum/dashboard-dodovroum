@@ -293,7 +293,7 @@ class AdminUserController extends Controller
                 'country' => $user['country'] ?? $user['pays'] ?? null,
                 'residences' => $user['residences'] ?? [],
                 'vehicles' => $user['vehicles'] ?? [],
-                'identityVerification' => $this->resolveIdentityVerification($user),
+                'identityVerification' => $this->fetchIdentityVerification($id, $user),
                 'createdAt' => $user['createdAt'] ?? null,
                 'updatedAt' => $user['updatedAt'] ?? null,
             ];
@@ -324,6 +324,30 @@ class AdminUserController extends Controller
             ]);
             return redirect()->route('admin.users.index')->with('error', 'Erreur de récupération: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Retourne l'objet vérification d'identité pour le frontend.
+     * Source de vérité : GET /identity-verification/admin/user/:userId, qui lit la table
+     * identity_verifications où le flux de soumission écrit réellement les photos.
+     * GET /users/:id ne renvoie jamais de photos exploitables (colonnes User.identityPhoto*
+     * jamais alimentées), donc resolveIdentityVerification() n'est qu'un filet de secours.
+     */
+    private function fetchIdentityVerification(string $userId, array $user): ?array
+    {
+        try {
+            $verification = $this->apiService->getUserIdentityVerification($userId);
+            if ($verification) {
+                return $verification;
+            }
+        } catch (\Exception $e) {
+            Log::warning('Impossible de récupérer la vérification d\'identité dédiée', [
+                'id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this->resolveIdentityVerification($user);
     }
 
     /**

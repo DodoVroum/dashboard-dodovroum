@@ -384,7 +384,7 @@
                   {{ formatDate(user.identityVerification.verifiedAt || user.identityVerification.verified_at) }}
                 </dd>
               </div>
-              <div v-if="user.identityVerification.rejectionReason || user.identityVerification.rejection_reason">
+              <div v-if="(user.identityVerification.verificationStatus || user.identityVerification.verification_status) === 'REJECTED' && (user.identityVerification.rejectionReason || user.identityVerification.rejection_reason)">
                 <dt class="text-sm font-medium text-slate-500">Raison du rejet</dt>
                 <dd class="mt-1 text-sm text-red-600">
                   {{ user.identityVerification.rejectionReason || user.identityVerification.rejection_reason }}

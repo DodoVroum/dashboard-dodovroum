@@ -2205,11 +2205,13 @@ class DodoVroumApiService
 
     /**
      * Rejeter la vérification d'identité d'un utilisateur
-     * Endpoint: PATCH /api/users/:id/identity-verification/reject
+     * Endpoint: PATCH /api/identity-verification/admin/verify/:userId
+     * (users/:id/identity-verification/reject n'existe pas côté NestJS — seul .../approve y est défini)
      */
     public function rejectIdentityVerification(string $userId, string $reason): array
     {
-        return $this->patch("users/{$userId}/identity-verification/reject", [
+        return $this->patch("identity-verification/admin/verify/{$userId}", [
+            'verificationStatus' => 'REJECTED',
             'rejectionReason' => $reason,
         ]);
     }

@@ -45,6 +45,19 @@ class ProfileController extends Controller
             $rawRole = $userData['role'] ?? $user->role ?? 'CLIENT';
             $displayRole = strtoupper($rawRole);
 
+            // La vérification d'identité ne concerne que les propriétaires ; on la récupère
+            // via son propre token (GET /identity-verification/status), pas via getUser().
+            $identityVerification = null;
+            if (in_array($displayRole, ['PROPRIETAIRE', 'OWNER', 'PROPRIÉTAIRE'])) {
+                try {
+                    $identityVerification = $this->apiService->getMyIdentityVerification();
+                } catch (\Exception $e) {
+                    Log::warning('Impossible de récupérer la vérification d\'identité du propriétaire connecté', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             $mappedUser = [
                 'id' => $userData['id'] ?? $userData['_id'] ?? $userId,
                 'email' => $userData['email'] ?? $user->email ?? '',
@@ -62,7 +75,8 @@ class ProfileController extends Controller
 
             return Inertia::render('Profile/Show', [
                 'user' => $mappedUser,
-                'auth_role' => $displayRole
+                'auth_role' => $displayRole,
+                'identityVerification' => $identityVerification,
             ]);
 
         } catch (\Exception $e) {
@@ -191,6 +205,42 @@ class ProfileController extends Controller
             ]);
 
             return back()->with('error', 'Impossible de mettre à jour le mot de passe. Réessayez plus tard.');
+        }
+    }
+
+    /**
+     * Soumettre (ou resoumettre) ses documents de vérification d'identité.
+     * Réservé de fait aux propriétaires : côté NestJS, submitVerification() rejette
+     * les autres rôles et refuse toute resoumission tant que le statut est VERIFIED.
+     */
+    public function submitIdentity(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'identityType' => 'required|string|in:CNI,PASSPORT,PERMIT,DRIVER_LICENSE,OTHER',
+            'identityNumber' => 'required|string|max:100',
+            'identityPhotoFront' => 'required|string',
+            'identityPhotoBack' => 'required|string',
+            'identityPhotoExtra' => 'nullable|string',
+        ]);
+
+        try {
+            $this->apiService->submitIdentityVerification(array_filter(
+                $validated,
+                static fn ($v) => $v !== null && $v !== ''
+            ));
+
+            return redirect()->back()->with('success', 'Documents envoyés. Votre dossier est en attente de vérification.');
+        } catch (\Exception $e) {
+            Log::error('Erreur soumission vérification identité', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Impossible d\'envoyer vos documents. Réessayez plus tard.');
         }
     }
 }

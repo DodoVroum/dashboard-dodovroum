@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post('/profile/identity-verification', [\App\Http\Controllers\ProfileController::class, 'submitIdentity'])->name('profile.identity-verification.submit');
+    Route::post('/profile/images/upload', [ImageUploadController::class, 'upload'])->name('profile.images.upload');
 });
 
 Route::middleware(['auth', 'admin'])

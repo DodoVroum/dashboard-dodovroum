@@ -268,12 +268,114 @@
         </div>
       </div>
     </div>
+
+    <!-- Vérification d'identité (propriétaires uniquement) -->
+    <div v-if="isOwner" class="bg-white border border-slate-200 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-lg font-semibold text-slate-900">Vérification d'identité</h2>
+        <span
+          v-if="verificationStatus"
+          :class="statusBadgeClass"
+          class="px-3 py-1 rounded-full text-xs font-medium"
+        >
+          {{ statusLabel }}
+        </span>
+      </div>
+      <p class="text-sm text-slate-500 mb-6">
+        Une pièce d'identité valide (CNI, passeport...) est nécessaire pour publier des annonces.
+      </p>
+
+      <div v-if="verificationStatus === 'REJECTED' && rejectionReason" class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <strong>Motif du rejet :</strong> {{ rejectionReason }}
+      </div>
+
+      <!-- Statut vérifié : lecture seule -->
+      <div v-if="verificationStatus === 'VERIFIED'" class="text-sm text-slate-600">
+        Votre identité a été vérifiée{{ identityVerification?.identityType ? ` (${identityVerification.identityType})` : '' }}. Aucune action requise.
+      </div>
+
+      <!-- En attente : lecture seule -->
+      <div v-else-if="verificationStatus === 'PENDING' || verificationStatus === 'UNDER_REVIEW'" class="text-sm text-slate-600">
+        Vos documents sont en cours d'examen par notre équipe.
+      </div>
+
+      <!-- Aucune vérification ou rejetée : formulaire de (re)soumission -->
+      <form v-else @submit.prevent="submitIdentityForm" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="identityType" class="block text-sm font-medium text-slate-700 mb-2">Type de document</label>
+            <select
+              id="identityType"
+              v-model="identityForm.identityType"
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="CNI">Carte nationale d'identité</option>
+              <option value="PASSPORT">Passeport</option>
+              <option value="PERMIT">Permis de conduire (pièce)</option>
+              <option value="DRIVER_LICENSE">Permis de conduire</option>
+              <option value="OTHER">Autre</option>
+            </select>
+            <div v-if="identityForm.errors.identityType" class="mt-1 text-sm text-red-600">{{ identityForm.errors.identityType }}</div>
+          </div>
+          <div>
+            <label for="identityNumber" class="block text-sm font-medium text-slate-700 mb-2">Numéro du document</label>
+            <input
+              id="identityNumber"
+              v-model="identityForm.identityNumber"
+              type="text"
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Ex : CI0123456789"
+            />
+            <div v-if="identityForm.errors.identityNumber" class="mt-1 text-sm text-red-600">{{ identityForm.errors.identityNumber }}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div v-for="slot in photoSlots" :key="slot.key">
+            <label class="block text-sm font-medium text-slate-700 mb-2">{{ slot.label }}</label>
+            <div v-if="identityForm[slot.key]" class="relative mb-2">
+              <img :src="identityForm[slot.key]" :alt="slot.label" class="w-full h-32 object-cover rounded-lg border border-slate-200" />
+              <button
+                type="button"
+                @click="identityForm[slot.key] = ''"
+                class="absolute top-1 right-1 bg-white/90 rounded-full p-1 text-slate-600 hover:text-red-600 shadow"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
+            <input
+              v-else
+              type="file"
+              accept="image/*"
+              :disabled="uploadingSlot === slot.key"
+              @change="(e) => handlePhotoUpload(e, slot.key)"
+              class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2"
+            />
+            <p v-if="uploadingSlot === slot.key" class="mt-1 text-xs text-slate-500">Envoi en cours...</p>
+            <div v-if="identityForm.errors[slot.key]" class="mt-1 text-sm text-red-600">{{ identityForm.errors[slot.key] }}</div>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button
+            type="submit"
+            :disabled="identityForm.processing || !!uploadingSlot"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span v-if="identityForm.processing">Envoi...</span>
+            <span v-else>{{ verificationStatus === 'REJECTED' ? 'Resoumettre mes documents' : 'Soumettre mes documents' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import axios from 'axios';
+import { X } from 'lucide-vue-next';
 import ProfileLayout from '../../Components/Layouts/ProfileLayout.vue';
 import { formatDate } from '../../utils/dates';
 
@@ -297,9 +399,18 @@ const props = withDefaults(
       createdAt?: string;
       updatedAt?: string;
     };
+    identityVerification?: {
+      identityType?: string;
+      identityNumber?: string;
+      identityPhotoFront?: string;
+      identityPhotoBack?: string;
+      identityPhotoExtra?: string;
+      verificationStatus?: string;
+      rejectionReason?: string;
+    } | null;
     error?: string;
   }>(),
-  { user: () => ({}) }
+  { user: () => ({}), identityVerification: null }
 );
 
 const user = computed(() => props.user ?? {});
@@ -378,5 +489,95 @@ const resetForm = () => {
 };
 
 // formatDate importé depuis utils/dates (timezone CI, fr-FR)
+
+const isOwner = computed(() => {
+  const r = (user.value.role ?? '').toLowerCase();
+  return r === 'owner' || r === 'proprietaire' || r === 'propriétaire';
+});
+
+const identityVerification = computed(() => props.identityVerification ?? null);
+
+const verificationStatus = computed(() => identityVerification.value?.verificationStatus ?? null);
+
+const rejectionReason = computed(() => identityVerification.value?.rejectionReason ?? null);
+
+const statusLabel = computed(() => {
+  switch (verificationStatus.value) {
+    case 'VERIFIED': return 'Vérifié';
+    case 'PENDING': return 'En attente';
+    case 'UNDER_REVIEW': return 'En cours d\'examen';
+    case 'REJECTED': return 'Rejeté';
+    default: return '';
+  }
+});
+
+const statusBadgeClass = computed(() => {
+  switch (verificationStatus.value) {
+    case 'VERIFIED': return 'bg-emerald-100 text-emerald-700';
+    case 'PENDING':
+    case 'UNDER_REVIEW': return 'bg-amber-100 text-amber-700';
+    case 'REJECTED': return 'bg-red-100 text-red-700';
+    default: return 'bg-slate-100 text-slate-600';
+  }
+});
+
+type PhotoSlotKey = 'identityPhotoFront' | 'identityPhotoBack' | 'identityPhotoExtra';
+
+const photoSlots: { key: PhotoSlotKey; label: string }[] = [
+  { key: 'identityPhotoFront', label: 'Recto' },
+  { key: 'identityPhotoBack', label: 'Verso' },
+  { key: 'identityPhotoExtra', label: 'Document supplémentaire (optionnel)' },
+];
+
+const identityForm = useForm({
+  identityType: 'CNI',
+  identityNumber: '',
+  identityPhotoFront: '',
+  identityPhotoBack: '',
+  identityPhotoExtra: '',
+});
+
+const uploadingSlot = ref<PhotoSlotKey | null>(null);
+
+const handlePhotoUpload = async (event: Event, slot: PhotoSlotKey) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Le fichier est trop volumineux. Taille maximale : 5MB');
+    return;
+  }
+
+  uploadingSlot.value = slot;
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('category', 'users');
+
+    const response = await axios.post('/profile/images/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    if (response.data.success && response.data.url) {
+      identityForm[slot] = response.data.url;
+    } else {
+      alert('Erreur lors de l\'upload de l\'image');
+    }
+  } catch (error: any) {
+    console.error('Erreur upload:', error);
+    alert('Erreur lors de l\'upload de l\'image: ' + (error.response?.data?.message || error.message));
+  } finally {
+    uploadingSlot.value = null;
+    target.value = '';
+  }
+};
+
+const submitIdentityForm = () => {
+  identityForm.post('/profile/identity-verification', {
+    preserveScroll: true,
+  });
+};
 </script>
 

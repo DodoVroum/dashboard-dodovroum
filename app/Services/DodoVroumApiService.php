@@ -2230,6 +2230,27 @@ class DodoVroumApiService
     }
 
     /**
+     * Récupérer la vérification d'identité de l'utilisateur actuellement connecté
+     * (le token utilisé détermine de qui il s'agit — voir resolveRequestToken()).
+     * Endpoint: GET /api/identity-verification/status
+     */
+    public function getMyIdentityVerification(): ?array
+    {
+        $result = $this->get('identity-verification/status');
+
+        return !empty($result) ? $result : null;
+    }
+
+    /**
+     * Soumettre ses propres documents d'identité (utilisateur connecté).
+     * Endpoint: POST /api/identity-verification/submit
+     */
+    public function submitIdentityVerification(array $data): array
+    {
+        return $this->post('identity-verification/submit', $data);
+    }
+
+    /**
      * Récupérer les types de véhicules disponibles depuis l'API
      */
     public function getVehicleTypes(): array

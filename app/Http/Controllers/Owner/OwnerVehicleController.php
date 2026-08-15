@@ -30,6 +30,28 @@ class OwnerVehicleController extends Controller
     }
 
     /**
+     * Vérifie que le véhicule appartient bien au propriétaire connecté.
+     * Comparaison robuste (string/numeric) car l'API NestJS peut renvoyer
+     * proprietaireId sous forme d'int ou de string selon les endpoints.
+     */
+    protected function vehicleBelongsToProprietaire(array $vehicle, $proprietaireId): bool
+    {
+        $vehicleOwnerId = $vehicle['proprietaireId']
+            ?? $vehicle['proprietaire']['id']
+            ?? $vehicle['proprietaire']['_id']
+            ?? $vehicle['ownerId']
+            ?? $vehicle['userId']
+            ?? null;
+
+        if ($vehicleOwnerId === null || $proprietaireId === null) {
+            return false;
+        }
+
+        return (string) $vehicleOwnerId === (string) $proprietaireId
+            || (is_numeric($vehicleOwnerId) && is_numeric($proprietaireId) && (int) $vehicleOwnerId === (int) $proprietaireId);
+    }
+
+    /**
      * Afficher la liste des véhicules du propriétaire
      */
     public function index(Request $request): Response
@@ -946,10 +968,9 @@ class OwnerVehicleController extends Controller
         try {
             $vehicle = $this->apiService->getVehicle($id);
             $proprietaireId = $this->getProprietaireId($user);
-            
+
             // Vérifier que le véhicule appartient au propriétaire
-            $vehicleOwnerId = $vehicle['proprietaireId'] ?? $vehicle['proprietaire']['id'] ?? null;
-            if ($vehicleOwnerId !== $proprietaireId) {
+            if (!$this->vehicleBelongsToProprietaire($vehicle, $proprietaireId)) {
                 return response()->json(['error' => 'Accès non autorisé'], 403);
             }
 
@@ -1000,9 +1021,8 @@ class OwnerVehicleController extends Controller
         try {
             $vehicle = $this->apiService->getVehicle($id);
             $proprietaireId = $this->getProprietaireId($user);
-            
-            $vehicleOwnerId = $vehicle['proprietaireId'] ?? $vehicle['proprietaire']['id'] ?? null;
-            if ($vehicleOwnerId !== $proprietaireId) {
+
+            if (!$this->vehicleBelongsToProprietaire($vehicle, $proprietaireId)) {
                 return response()->json(['error' => 'Accès non autorisé'], 403);
             }
 
@@ -1116,9 +1136,8 @@ class OwnerVehicleController extends Controller
         try {
             $vehicle = $this->apiService->getVehicle($id);
             $proprietaireId = $this->getProprietaireId($user);
-            
-            $vehicleOwnerId = $vehicle['proprietaireId'] ?? $vehicle['proprietaire']['id'] ?? null;
-            if ($vehicleOwnerId !== $proprietaireId) {
+
+            if (!$this->vehicleBelongsToProprietaire($vehicle, $proprietaireId)) {
                 return response()->json(['error' => 'Accès non autorisé'], 403);
             }
 

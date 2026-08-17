@@ -1514,6 +1514,15 @@ class DodoVroumApiService
     }
 
     /**
+     * Modérer une annonce résidence (ACTIVE/HIDDEN/SUSPENDED) — admin uniquement côté API.
+     * Endpoint: PATCH /api/residences/:id/moderation
+     */
+    public function moderateResidence(string $id, string $status): array
+    {
+        return $this->patch("residences/{$id}/moderation", ['status' => $status]);
+    }
+
+    /**
      * Bloquer des dates pour une résidence
      * Endpoint: POST /api/residences/:id/blocked-dates
      */
@@ -1780,6 +1789,15 @@ class DodoVroumApiService
     {
         // L'API utilise PATCH, pas PUT
         return $this->patch("vehicles/{$id}", $data);
+    }
+
+    /**
+     * Modérer une annonce véhicule (ACTIVE/HIDDEN/SUSPENDED) — admin uniquement côté API.
+     * Endpoint: PATCH /api/vehicles/:id/moderation
+     */
+    public function moderateVehicle(string $id, string $status): array
+    {
+        return $this->patch("vehicles/{$id}/moderation", ['status' => $status]);
     }
 
     /**
@@ -2165,6 +2183,43 @@ class DodoVroumApiService
         ]);
         
         return $this->post('users', $data);
+    }
+
+    /**
+     * Auto-inscription propriétaire (route publique du dashboard).
+     * Endpoint: POST /api/auth/register/proprietaire
+     *
+     * Appel volontairement SANS token (contrairement à post()) : cet endpoint
+     * NestJS est public et le rôle PROPRIETAIRE y est forcé côté serveur — le
+     * dashboard n'a besoin d'aucune credential admin pour cet appel.
+     * Retourne ['access_token'=>, 'refresh_token'=>, 'user'=>[...]] tel quel
+     * pour permettre l'auto-login (même shape que le login classique).
+     */
+    public function registerProprietaire(array $data): array
+    {
+        $url = rtrim($this->baseUrl, '/').'/auth/register/proprietaire';
+
+        $response = $this->createHttpClient()
+            ->acceptJson()
+            ->asJson()
+            ->post($url, $data);
+
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        $errorBody = $response->json();
+        $message = $errorBody['message'] ?? $errorBody['error'] ?? 'Inscription impossible pour le moment.';
+        if (is_array($message)) {
+            $message = implode(' ', $message);
+        }
+
+        Log::warning('Échec auto-inscription propriétaire', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        throw new \Exception($message);
     }
 
     /**

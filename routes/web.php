@@ -24,7 +24,8 @@ Route::get('/', function () {
         }
         
         // Fallback: vérifier directement le rôle si les méthodes n'existent pas
-        $role = strtolower($user->role ?? 'owner');
+        // (défense en profondeur — pas de défaut "owner" pour un rôle non reconnu)
+        $role = strtolower($user->role ?? '');
         if ($role === 'admin' || $role === 'administrator') {
             return redirect()->route('admin.dashboard');
         }
@@ -32,7 +33,7 @@ Route::get('/', function () {
             return redirect()->route('owner.dashboard');
         }
     }
-    
+
     // Rediriger vers la page de login
     return redirect()->route('login');
 });
@@ -41,7 +42,15 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [\App\Http\Controllers\Auth\LoginController::class, 'show'])->name('login');
     Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'store'])->name('login.store');
+    Route::get('/inscription-proprietaire', [\App\Http\Controllers\Auth\RegisterProprietaireController::class, 'show'])->name('register.owner');
+    Route::post('/inscription-proprietaire', [\App\Http\Controllers\Auth\RegisterProprietaireController::class, 'store'])->name('register.owner.store');
 });
+
+// Documents légaux (consultation publique, avant/après inscription)
+Route::get('/contrat-partenariat-proprietaire', function () {
+    return redirect('/Contrat_Proprietaires_DodoVroum_v10.pdf');
+})->name('legal.partner-contract');
+Route::get('/conditions-utilisation', [\App\Http\Controllers\LegalController::class, 'terms'])->name('legal.terms');
 
 Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'destroy'])->name('logout')->middleware('auth');
 Route::post('/auth/restore', [\App\Http\Controllers\Auth\LoginController::class, 'restore'])->name('auth.restore')->middleware('guest');
@@ -65,11 +74,13 @@ Route::middleware(['auth', 'admin'])
         Route::get('/residences/archives', [AdminResidenceController::class, 'archived'])->name('residences.archives');
         Route::patch('/residences/{id}/toggle-active', [AdminResidenceController::class, 'toggleActive'])->name('residences.toggle-active');
         Route::patch('/residences/{id}/reactivate', [AdminResidenceController::class, 'reactivate'])->name('residences.reactivate');
+        Route::patch('/residences/{id}/moderate', [AdminResidenceController::class, 'moderate'])->name('residences.moderate');
         Route::resource('residences', AdminResidenceController::class);
         Route::get('/residences/{id}/check-bookings', [AdminResidenceController::class, 'checkBookings'])->name('residences.check-bookings');
         Route::get('/vehicles/archives', [AdminVehicleController::class, 'archived'])->name('vehicles.archives');
         Route::patch('/vehicles/{id}/toggle-active', [AdminVehicleController::class, 'toggleActive'])->name('vehicles.toggle-active');
         Route::patch('/vehicles/{id}/reactivate', [AdminVehicleController::class, 'reactivate'])->name('vehicles.reactivate');
+        Route::patch('/vehicles/{id}/moderate', [AdminVehicleController::class, 'moderate'])->name('vehicles.moderate');
         Route::resource('vehicles', AdminVehicleController::class);
         Route::get('/vehicles/{id}/check-bookings', [AdminVehicleController::class, 'checkBookings'])->name('vehicles.check-bookings');
         // Route spécifique AVANT la route resource pour éviter les conflits

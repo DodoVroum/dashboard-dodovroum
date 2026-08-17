@@ -141,6 +141,15 @@ class ApiAuthService
             // Normaliser le rôle
             $role = $this->normalizeRole($userData, $email);
 
+            if ($role === null) {
+                // Compte valide (email/mot de passe corrects) mais rôle non autorisé
+                // sur ce dashboard (ex. CLIENT) — cloisonnement strict admin/owner.
+                Log::warning('Connexion refusée : rôle non autorisé sur le dashboard', [
+                    'email' => $email,
+                ]);
+                return null;
+            }
+
             Log::info('Rôle normalisé après authentification', [
                 'email' => $email,
                 'admin_email_config' => $this->adminEmail,
@@ -210,7 +219,14 @@ class ApiAuthService
 
                 if ($response->successful()) {
                     $data = $response->json();
-                    return ApiResponseNormalizer::data($data);
+                    // ::data() est conçu pour des LISTES — sur un objet
+                    // unique il l'enveloppe dans [0 => {...}] et le champ
+                    // 'role' devient invisible pour normalizeRole(). ::single()
+                    // gère correctement le cas "objet direct avec id".
+                    $normalized = ApiResponseNormalizer::single($data);
+                    if ($normalized !== null) {
+                        return $normalized;
+                    }
                 }
             }
 
@@ -228,13 +244,17 @@ class ApiAuthService
 
     /**
      * Normaliser le rôle utilisateur
-     * 
+     *
      * Priorité :
      * 1. Rôle envoyé par l'API (role, type, isAdmin, is_admin)
      * 2. Email admin configuré (fallback si l'API ne fournit pas de rôle)
-     * 3. Owner par défaut
+     *
+     * Retourne null si aucun signal admin/owner n'est trouvé (ex. compte CLIENT) :
+     * ce dashboard est réservé aux admins et propriétaires, il ne doit JAMAIS
+     * défaut-accorder l'accès owner à un rôle non reconnu (voir authenticate()
+     * qui rejette la connexion dans ce cas).
      */
-    protected function normalizeRole(array $userData, ?string $loginEmail = null): string
+    protected function normalizeRole(array $userData, ?string $loginEmail = null): ?string
     {
         // Utiliser l'email de connexion en priorité pour la détection admin
         $email = strtolower($loginEmail ?? $userData['email'] ?? '');
@@ -302,14 +322,14 @@ class ApiAuthService
             return 'admin';
         }
 
-        // Par défaut, considérer comme owner
-        Log::debug('Rôle par défaut: owner', [
+        // Aucun signal admin/owner : ne JAMAIS défaut-accorder l'accès owner.
+        // (ex. un compte CLIENT de l'app mobile qui tente de se connecter ici)
+        Log::warning('Rôle non reconnu — accès dashboard refusé', [
             'email' => $email,
             'email_connexion' => $loginEmail,
-            'admin_email_config' => $adminEmail,
-            'raison' => 'Aucun rôle détecté dans les données de l\'API et email ne correspond pas à l\'admin configuré',
+            'role_api' => $userData['role'] ?? $userData['type'] ?? 'non défini',
         ]);
-        return 'owner';
+        return null;
     }
 
     /**

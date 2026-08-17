@@ -118,6 +118,17 @@ class LoginController extends Controller
 
         $fullUserData = array_merge($userData, ['token' => $token]);
         $user = new \App\Models\ApiUser($fullUserData);
+
+        // Le rôle vient directement du JWT ici (pas de normalizeRole()) : ce
+        // dashboard est réservé aux admins et propriétaires, un token CLIENT
+        // valide ne doit jamais pouvoir restaurer une session owner/admin.
+        if (!$user->isAdmin() && !$user->isOwner()) {
+            \Illuminate\Support\Facades\Log::warning('Restauration de session refusée : rôle non autorisé', [
+                'email' => $user->email ?? null,
+            ]);
+            return back()->withErrors(['token' => 'Ce compte n\'est pas autorisé à accéder à ce tableau de bord.']);
+        }
+
         Auth::login($user);
 
         $request->session()->regenerate();

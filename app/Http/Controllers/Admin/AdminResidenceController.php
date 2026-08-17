@@ -354,6 +354,27 @@ class AdminResidenceController extends Controller
     }
 
     /**
+     * Modérer une annonce (masquer/suspendre/réactiver) — contrôle a posteriori,
+     * pas de validation préalable bloquante à la création.
+     */
+    public function moderate(Request $request, string $id): RedirectResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', 'in:ACTIVE,HIDDEN,SUSPENDED'],
+        ]);
+
+        try {
+            $this->apiService->moderateResidence($id, $data['status']);
+            return redirect()->route('admin.residences.show', $id)
+                ->with('success', 'Statut de modération mis à jour.');
+        } catch (\Exception $e) {
+            Log::error('Erreur modération résidence admin', ['id' => $id, 'error' => $e->getMessage()]);
+            return redirect()->route('admin.residences.show', $id)
+                ->with('error', 'Erreur lors de la modération : ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Afficher le formulaire de création
      */
     public function create(): Response

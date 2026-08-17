@@ -366,6 +366,30 @@
           Supprimer le véhicule
         </button>
       </div>
+
+      <div class="mt-5 pt-5 border-t border-red-200">
+        <p class="text-sm font-medium text-red-900 mb-2">
+          Modération de l'annonce (contrôle a posteriori — statut actuel :
+          <span class="font-semibold">{{ moderationLabel(vehicle?.moderationStatus) }}</span>)
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <form v-for="opt in moderationOptions" :key="opt.value" :action="`/admin/vehicles/${vehicle?.id}/moderate`" method="POST">
+            <input type="hidden" name="_token" :value="csrfToken()" />
+            <input type="hidden" name="_method" value="PATCH" />
+            <input type="hidden" name="status" :value="opt.value" />
+            <button
+              type="submit"
+              :disabled="vehicle?.moderationStatus === opt.value"
+              class="px-4 py-2 bg-white rounded-lg text-sm border"
+              :class="vehicle?.moderationStatus === opt.value
+                ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                : opt.class"
+            >
+              {{ opt.label }}
+            </button>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- Modal de confirmation de suppression - Téléporté directement dans <body> -->
@@ -613,6 +637,17 @@ const toggleActionsMenu = () => {
 
 const page = usePage();
 const csrfToken = () => (page.props as any).csrf_token as string;
+
+const moderationOptions = [
+  { value: 'ACTIVE', label: 'Réactiver', class: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' },
+  { value: 'HIDDEN', label: 'Masquer', class: 'border-amber-300 text-amber-700 hover:bg-amber-50' },
+  { value: 'SUSPENDED', label: 'Suspendre', class: 'border-red-300 text-red-700 hover:bg-red-50' },
+];
+
+const moderationLabel = (status: string | undefined): string => {
+  const labels: Record<string, string> = { ACTIVE: 'Active', HIDDEN: 'Masquée', SUSPENDED: 'Suspendue' };
+  return labels[status ?? 'ACTIVE'] ?? 'Active';
+};
 
 const confirmDelete = async () => {
   if (!props.vehicle?.id) {

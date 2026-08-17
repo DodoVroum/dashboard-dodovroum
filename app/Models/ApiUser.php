@@ -107,7 +107,9 @@ class ApiUser implements Authenticatable
     public function isAdmin(): bool
     {
         // Normaliser le rôle en minuscules pour la comparaison
-        $role = strtolower($this->attributes['role'] ?? 'owner');
+        // Défense en profondeur : un rôle manquant ne doit jamais être traité
+        // comme "owner" par défaut (échec fermé, pas ouvert).
+        $role = strtolower($this->attributes['role'] ?? '');
         $email = strtolower($this->attributes['email'] ?? '');
         $adminEmail = strtolower(config('services.dodovroum.admin_email', ''));
         
@@ -131,7 +133,9 @@ class ApiUser implements Authenticatable
     public function isOwner(): bool
     {
         // Normaliser le rôle en minuscules pour la comparaison
-        $role = strtolower($this->attributes['role'] ?? 'owner');
+        // Défense en profondeur : un rôle manquant ne doit jamais être traité
+        // comme "owner" par défaut (échec fermé, pas ouvert).
+        $role = strtolower($this->attributes['role'] ?? '');
         return in_array($role, ['owner', 'proprietaire', 'propriétaire']);
     }
 

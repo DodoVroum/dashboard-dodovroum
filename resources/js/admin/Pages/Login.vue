@@ -227,6 +227,10 @@
 
         </form>
 
+        <p class="switch-link">
+          Vous êtes propriétaire ? <a href="/inscription-proprietaire">Créer un compte</a>
+        </p>
+
         <p class="card-footer">© {{ new Date().getFullYear() }} DodoVroum · Plateforme de gestion locative</p>
       </div>
     </main>
@@ -915,12 +919,26 @@ const submit = () => form.post('/login', {
   flex-shrink: 0;
 }
 
+/* Lien inscription */
+.switch-link {
+  text-align: center;
+  font-size: .82rem;
+  color: rgba(255,255,255,.4);
+  margin: 20px 0 0;
+}
+.switch-link a {
+  color: #f97316;
+  font-weight: 600;
+  text-decoration: none;
+}
+.switch-link a:hover { text-decoration: underline; }
+
 /* Footer */
 .card-footer {
   text-align: center;
   font-size: .71rem;
   color: rgba(255,255,255,.18);
-  margin: 26px 0 0;
+  margin: 12px 0 0;
 }
 
 /* ══════════════════════════════════════════

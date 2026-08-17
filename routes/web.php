@@ -46,6 +46,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/inscription-proprietaire', [\App\Http\Controllers\Auth\RegisterProprietaireController::class, 'store'])->name('register.owner.store');
 });
 
+// Étape 2 de l'inscription (pièce d'identité) : le compte existe déjà et l'utilisateur
+// est auto-connecté par store() ci-dessus, donc middleware 'auth' + 'owner', pas 'guest'.
+Route::middleware(['auth', 'owner'])->group(function () {
+    Route::get('/inscription-proprietaire/documents', [\App\Http\Controllers\Auth\RegisterProprietaireController::class, 'identityStep'])->name('register.owner.documents');
+});
+
 // Documents légaux (consultation publique, avant/après inscription)
 Route::get('/contrat-partenariat-proprietaire', function () {
     return redirect('/Contrat_Proprietaires_DodoVroum_v10.pdf');

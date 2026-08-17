@@ -50,7 +50,17 @@ class RegisterProprietaireControllerTest extends TestCase
         // ce champ n'est lu nulle part par le contrôleur.
         $response = $this->post('/inscription-proprietaire', $this->validPayload(['role' => 'ADMIN']));
 
-        $response->assertRedirect(route('owner.dashboard'));
+        // Redirige vers l'étape 2 (pièce d'identité), pas directement le dashboard.
+        $response->assertRedirect(route('register.owner.documents'));
+    }
+
+    public function test_etape_documents_accessible_apres_inscription_mais_pas_par_un_visiteur(): void
+    {
+        $response = $this->get('/inscription-proprietaire/documents');
+
+        // Middleware 'auth' : un visiteur non connecté est renvoyé au login,
+        // il ne peut pas atteindre cette étape sans être passé par store().
+        $response->assertRedirect('/login');
     }
 
     public function test_inscription_refusee_si_la_case_du_contrat_nest_pas_cochee(): void

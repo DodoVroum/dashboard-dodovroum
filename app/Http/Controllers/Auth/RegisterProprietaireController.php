@@ -113,6 +113,17 @@ class RegisterProprietaireController extends Controller
 
         Log::info('Auto-inscription propriétaire réussie', ['user_id' => $userData['id'], 'email' => $userData['email']]);
 
-        return redirect()->route('owner.dashboard');
+        return redirect()->route('register.owner.documents');
+    }
+
+    /**
+     * Étape 2 de l'inscription : envoi de la pièce d'identité (recto/verso).
+     * Réutilise tel quel les endpoints existants (profile.images.upload,
+     * profile.identity-verification.submit) — la session/JWT créés par
+     * store() ci-dessus suffisent, aucun nouveau endpoint nécessaire.
+     */
+    public function identityStep(): Response
+    {
+        return Inertia::render('RegisterOwnerDocuments');
     }
 }

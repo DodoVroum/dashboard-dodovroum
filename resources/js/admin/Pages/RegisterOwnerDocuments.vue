@@ -50,27 +50,16 @@
         </transition>
 
         <form @submit.prevent="submitIdentityForm" class="form">
-          <div class="field-row">
-            <div class="field">
-              <label for="identityType" class="field__lbl">Type de document</label>
-              <select id="identityType" v-model="identityForm.identityType" class="field__inp field__inp--noicon field__select">
-                <option value="CNI">Carte nationale d'identité</option>
-                <option value="PASSPORT">Passeport</option>
-                <option value="PERMIT">Permis de conduire (pièce)</option>
-                <option value="DRIVER_LICENSE">Permis de conduire</option>
-                <option value="OTHER">Autre</option>
-              </select>
-              <p v-if="identityForm.errors.identityType" class="field__msg">{{ identityForm.errors.identityType }}</p>
-            </div>
-
-            <div class="field">
-              <label for="identityNumber" class="field__lbl">Numéro du document</label>
-              <input
-                id="identityNumber" v-model="identityForm.identityNumber" type="text"
-                placeholder="Ex : CI0123456789" class="field__inp field__inp--noicon"
-              />
-              <p v-if="identityForm.errors.identityNumber" class="field__msg">{{ identityForm.errors.identityNumber }}</p>
-            </div>
+          <div class="field">
+            <label for="identityType" class="field__lbl">Type de document</label>
+            <select id="identityType" v-model="identityForm.identityType" class="field__inp field__inp--noicon field__select">
+              <option value="CNI">Carte nationale d'identité</option>
+              <option value="PASSPORT">Passeport</option>
+              <option value="PERMIT">Permis de conduire (pièce)</option>
+              <option value="DRIVER_LICENSE">Permis de conduire</option>
+              <option value="OTHER">Autre</option>
+            </select>
+            <p v-if="identityForm.errors.identityType" class="field__msg">{{ identityForm.errors.identityType }}</p>
           </div>
 
           <div class="photo-row">
@@ -118,20 +107,17 @@ import logoUrl from '../assets/logo.png';
 
 defineOptions({ layout: AuthLayout });
 
-type PhotoSlotKey = 'identityPhotoFront' | 'identityPhotoBack' | 'identityPhotoExtra';
+type PhotoSlotKey = 'identityPhotoFront' | 'identityPhotoBack';
 
 const photoSlots: { key: PhotoSlotKey; label: string }[] = [
   { key: 'identityPhotoFront', label: 'Recto' },
   { key: 'identityPhotoBack', label: 'Verso' },
-  { key: 'identityPhotoExtra', label: 'Document supplémentaire (optionnel)' },
 ];
 
 const identityForm = useForm({
   identityType: 'CNI',
-  identityNumber: '',
   identityPhotoFront: '',
   identityPhotoBack: '',
-  identityPhotoExtra: '',
 });
 
 const uploadingSlot = ref<PhotoSlotKey | null>(null);
@@ -242,7 +228,7 @@ const submitIdentityForm = () => {
 .field__inp:focus { background: rgba(255,255,255,.1); border-color: rgba(249,115,22,.65); }
 .field__msg { font-size: .76rem; color: #fca5a5; font-weight: 500; margin: 0; }
 
-.photo-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.photo-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .photo-slot { display: flex; flex-direction: column; gap: 6px; }
 .photo-drop { display: flex; align-items: center; justify-content: center; text-align: center; padding: 18px 8px; border: 1.5px dashed rgba(255,255,255,.25); border-radius: 12px; font-size: .78rem; color: rgba(255,255,255,.5); cursor: pointer; transition: border-color .18s, background .18s; min-height: 84px; }
 .photo-drop:hover { border-color: rgba(249,115,22,.6); background: rgba(249,115,22,.06); }
@@ -273,7 +259,5 @@ const submitIdentityForm = () => {
 @media (max-width: 500px) {
   .glass-card { padding: 28px 20px; border-radius: 22px; }
   .card-title { font-size: 1.4rem; }
-  .field-row { grid-template-columns: 1fr; }
-  .photo-row { grid-template-columns: 1fr 1fr; }
 }
 </style>

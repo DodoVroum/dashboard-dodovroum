@@ -222,7 +222,7 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'identityType' => 'required|string|in:CNI,PASSPORT,PERMIT,DRIVER_LICENSE,OTHER',
-            'identityNumber' => 'required|string|max:100',
+            'identityNumber' => 'nullable|string|max:100',
             'identityPhotoFront' => 'required|string',
             'identityPhotoBack' => 'required|string',
             'identityPhotoExtra' => 'nullable|string',

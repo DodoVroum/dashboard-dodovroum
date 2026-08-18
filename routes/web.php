@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\ImageUploadController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -34,8 +35,8 @@ Route::get('/', function () {
         }
     }
 
-    // Rediriger vers la page de login
-    return redirect()->route('login');
+    // Visiteur non connecté : page d'accueil publique (au lieu d'un redirect direct vers /login)
+    return Inertia::render('Home');
 });
 
 // Routes d'authentification

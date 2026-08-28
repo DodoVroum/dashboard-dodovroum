@@ -422,38 +422,15 @@ class AdminResidenceController extends Controller
                     ->with('error', 'Résidence non trouvée');
             }
             
-            // Récupérer les réservations liées à cette résidence
-            // Essayer d'abord avec un filtre côté API pour éviter de charger toutes les réservations
-            $residenceBookings = $this->apiService->getBookings(['residenceId' => $id]);
-
-            // Si l'API ne supporte pas ce filtre (retourne tout ou rien), filtrer côté client
-            if (empty($residenceBookings)) {
-                $allBookings = $this->apiService->getBookings([]);
-                foreach ($allBookings as $booking) {
-                    $bookingResidenceId = null;
-
-                    if (isset($booking['residence']) && is_array($booking['residence'])) {
-                        $bookingResidenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
-                    }
-
-                    if (!$bookingResidenceId) {
-                        $bookingResidenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
-                    }
-
-                    // Vérifier aussi via une offre combo liée
-                    if (!$bookingResidenceId && isset($booking['offer']) && is_array($booking['offer'])) {
-                        $offer = $booking['offer'];
-                        $bookingResidenceId = $offer['residenceId'] ?? $offer['residence_id'] ?? null;
-                        if (!$bookingResidenceId && isset($offer['residence']) && is_array($offer['residence'])) {
-                            $bookingResidenceId = $offer['residence']['id'] ?? $offer['residence']['_id'] ?? null;
-                        }
-                    }
-
-                    if ($bookingResidenceId && (string) $bookingResidenceId === (string) $id) {
-                        $residenceBookings[] = $booking;
-                    }
-                }
-            }
+            // Récupérer les réservations liées à cette résidence.
+            // L'API NestJS (GET /api/bookings) ignore tout paramètre de filtre et renvoie
+            // TOUTES les réservations pour un admin : le filtrage par résidence doit donc
+            // toujours se faire côté client, sinon les stats et le calendrier agrègent
+            // les réservations de toutes les résidences.
+            $allBookings = $this->apiService->getBookings([]);
+            $residenceBookings = array_values(array_filter($allBookings, function ($booking) use ($id) {
+                return (string) $this->resolveBookingResidenceId($booking) === (string) $id;
+            }));
 
             $stats = $this->calculateResidenceStats($residenceBookings, $residence);
 
@@ -503,6 +480,39 @@ class AdminResidenceController extends Controller
         ]);
     }
     
+    /**
+     * Résoudre l'ID de résidence lié à une réservation, en parcourant les
+     * différentes structures possibles renvoyées par l'API NestJS
+     * (résidence inline, ID à plat, ou via une offre combo).
+     */
+    private function resolveBookingResidenceId(array $booking): ?string
+    {
+        if (isset($booking['residence']) && is_array($booking['residence'])) {
+            $residenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
+            if ($residenceId) {
+                return (string) $residenceId;
+            }
+        }
+
+        $residenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
+        if ($residenceId) {
+            return (string) $residenceId;
+        }
+
+        if (isset($booking['offer']) && is_array($booking['offer'])) {
+            $offer = $booking['offer'];
+            $residenceId = $offer['residenceId'] ?? $offer['residence_id'] ?? null;
+            if (!$residenceId && isset($offer['residence']) && is_array($offer['residence'])) {
+                $residenceId = $offer['residence']['id'] ?? $offer['residence']['_id'] ?? null;
+            }
+            if ($residenceId) {
+                return (string) $residenceId;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Calculer les statistiques d'une résidence
      */

@@ -385,37 +385,15 @@ class OwnerResidenceController extends Controller
                 $mappedResidence['blockedDates'] = [];
             }
             
-            // Récupérer les réservations liées à cette résidence
-            // Essayer d'abord avec un filtre côté API
-            $residenceBookings = $this->apiService->getBookings(['residenceId' => $id]);
-
-            // Fallback : filtrer les réservations du propriétaire côté client
-            if (empty($residenceBookings) && $proprietaireId) {
-                $allBookings = $this->apiService->getBookings(['proprietaireId' => $proprietaireId]);
-                foreach ($allBookings as $booking) {
-                    $bookingResidenceId = null;
-
-                    if (isset($booking['residence']) && is_array($booking['residence'])) {
-                        $bookingResidenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
-                    }
-
-                    if (!$bookingResidenceId) {
-                        $bookingResidenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
-                    }
-
-                    if (!$bookingResidenceId && isset($booking['offer']) && is_array($booking['offer'])) {
-                        $offer = $booking['offer'];
-                        $bookingResidenceId = $offer['residenceId'] ?? $offer['residence_id'] ?? null;
-                        if (!$bookingResidenceId && isset($offer['residence']) && is_array($offer['residence'])) {
-                            $bookingResidenceId = $offer['residence']['id'] ?? $offer['residence']['_id'] ?? null;
-                        }
-                    }
-
-                    if ($bookingResidenceId && (string) $bookingResidenceId === (string) $id) {
-                        $residenceBookings[] = $booking;
-                    }
-                }
-            }
+            // Récupérer les réservations liées à cette résidence.
+            // L'API NestJS (GET /api/bookings) ignore tout paramètre de filtre et renvoie
+            // toutes les réservations du propriétaire : le filtrage par résidence doit
+            // toujours se faire côté client, sinon les stats et le calendrier agrègent
+            // les réservations de toutes ses résidences.
+            $allBookings = $this->apiService->getBookings([]);
+            $residenceBookings = array_values(array_filter($allBookings, function ($booking) use ($id) {
+                return (string) $this->resolveBookingResidenceId($booking) === (string) $id;
+            }));
 
             $stats = $this->calculateResidenceStats($residenceBookings, $mappedResidence);
 
@@ -981,6 +959,39 @@ class OwnerResidenceController extends Controller
             return redirect()->route('owner.residences.show', $id)
                 ->with('error', 'Erreur lors de la mise à jour.');
         }
+    }
+
+    /**
+     * Résoudre l'ID de résidence lié à une réservation, en parcourant les
+     * différentes structures possibles renvoyées par l'API NestJS
+     * (résidence inline, ID à plat, ou via une offre combo).
+     */
+    private function resolveBookingResidenceId(array $booking): ?string
+    {
+        if (isset($booking['residence']) && is_array($booking['residence'])) {
+            $residenceId = $booking['residence']['id'] ?? $booking['residence']['_id'] ?? null;
+            if ($residenceId) {
+                return (string) $residenceId;
+            }
+        }
+
+        $residenceId = $booking['residenceId'] ?? $booking['residence_id'] ?? null;
+        if ($residenceId) {
+            return (string) $residenceId;
+        }
+
+        if (isset($booking['offer']) && is_array($booking['offer'])) {
+            $offer = $booking['offer'];
+            $residenceId = $offer['residenceId'] ?? $offer['residence_id'] ?? null;
+            if (!$residenceId && isset($offer['residence']) && is_array($offer['residence'])) {
+                $residenceId = $offer['residence']['id'] ?? $offer['residence']['_id'] ?? null;
+            }
+            if ($residenceId) {
+                return (string) $residenceId;
+            }
+        }
+
+        return null;
     }
 
     /**

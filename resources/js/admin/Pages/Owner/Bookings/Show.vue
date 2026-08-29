@@ -237,6 +237,10 @@
                     <MessageCircle class="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
+                <div v-else-if="!booking.ownerConfirmedAt" class="flex items-center gap-2">
+                  <Phone class="w-4 h-4 text-slate-300" />
+                  <span class="text-sm text-slate-400">Numéro visible après confirmation de la réservation</span>
+                </div>
               </div>
             </div>
           </div>

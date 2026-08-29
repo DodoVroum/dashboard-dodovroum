@@ -8,7 +8,6 @@ use App\Services\DodoVroumApiService;
 use App\Services\DodoVroumApi\BookingService;
 use App\Services\DodoVroumApi\ResidenceService;
 use App\Services\DodoVroumApi\VehicleService;
-use App\Services\DodoVroumApi\UserService;
 use App\Services\BookingOwnerScopeService;
 use App\Exceptions\DodoVroumApiException;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +24,6 @@ class OwnerBookingController extends Controller
     
     protected DodoVroumApiService $apiService;
     protected BookingService $bookingService;
-    protected UserService $userService;
     protected ResidenceService $residenceService;
     protected VehicleService $vehicleService;
 
@@ -34,14 +32,12 @@ class OwnerBookingController extends Controller
     public function __construct(
         DodoVroumApiService $apiService,
         BookingService $bookingService,
-        UserService $userService,
         ResidenceService $residenceService,
         VehicleService $vehicleService,
         BookingOwnerScopeService $bookingOwnerScopeService
     ) {
         $this->apiService = $apiService;
         $this->bookingService = $bookingService;
-        $this->userService = $userService;
         $this->residenceService = $residenceService;
         $this->vehicleService = $vehicleService;
         $this->bookingOwnerScopeService = $bookingOwnerScopeService;
@@ -115,34 +111,10 @@ class OwnerBookingController extends Controller
                 }
             }
 
-            // Récupérer tous les utilisateurs pour mapper les clientId
-            $usersMap = [];
-            try {
-                $allUsers = $this->userService->all();
-                foreach ($allUsers as $apiUser) {
-                    $userId = $apiUser['id'] ?? $apiUser['_id'] ?? null;
-                    if ($userId) {
-                        $firstName = $apiUser['firstName'] ?? $apiUser['prenom'] ?? '';
-                        $lastName = $apiUser['lastName'] ?? $apiUser['nom'] ?? $apiUser['name'] ?? '';
-                        $fullName = trim($firstName . ' ' . $lastName);
-                        if (empty($fullName)) {
-                            $fullName = $apiUser['email'] ?? 'Client inconnu';
-                        }
-                        $usersMap[$userId] = [
-                            'name' => $fullName,
-                            'email' => $apiUser['email'] ?? null,
-                            'phone' => $apiUser['phone'] ?? $apiUser['telephone'] ?? null,
-                        ];
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Impossible de récupérer les utilisateurs pour le mapping', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
             // Mapper les réservations pour le frontend AVANT la pagination
-            $mappedBookings = array_map(function ($booking) use ($usersMap) {
+            $mappedBookings = array_map(function ($booking) {
+                // L'API NestJS (formatBookingResponse) renvoie toujours `clientName` ;
+                // les autres branches ne servent que de garde-fou pour d'anciennes formes.
                 $customerName = 'Client inconnu';
                 if (isset($booking['user']) && is_array($booking['user'])) {
                     $user = $booking['user'];
@@ -152,12 +124,12 @@ class OwnerBookingController extends Controller
                     if (empty($customerName)) {
                         $customerName = $user['email'] ?? 'Client inconnu';
                     }
+                } elseif (!empty($booking['clientName']) && $booking['clientName'] !== 'Client Inconnu') {
+                    $customerName = $booking['clientName'];
                 } elseif (isset($booking['customer_name']) && !empty($booking['customer_name'])) {
                     $customerName = $booking['customer_name'];
                 } elseif (isset($booking['customer']) && !empty($booking['customer'])) {
                     $customerName = $booking['customer'];
-                } elseif (isset($booking['clientId']) && isset($usersMap[$booking['clientId']])) {
-                    $customerName = $usersMap[$booking['clientId']]['name'];
                 } elseif (isset($booking['clientId'])) {
                     $customerName = 'Client #' . substr($booking['clientId'], 0, 8);
                 }
@@ -336,37 +308,14 @@ class OwnerBookingController extends Controller
                 abort(404, 'Réservation non trouvée ou accès non autorisé');
             }
 
-            // Récupérer tous les utilisateurs pour mapper les clientId
-            $usersMap = [];
-            try {
-                $allUsers = $this->userService->all();
-                foreach ($allUsers as $apiUser) {
-                    $userId = $apiUser['id'] ?? $apiUser['_id'] ?? null;
-                    if ($userId) {
-                        $firstName = $apiUser['firstName'] ?? $apiUser['prenom'] ?? '';
-                        $lastName = $apiUser['lastName'] ?? $apiUser['nom'] ?? $apiUser['name'] ?? '';
-                        $fullName = trim($firstName . ' ' . $lastName);
-                        if (empty($fullName)) {
-                            $fullName = $apiUser['email'] ?? 'Client inconnu';
-                        }
-                        $usersMap[$userId] = [
-                            'name' => $fullName,
-                            'email' => $apiUser['email'] ?? null,
-                            'phone' => $apiUser['phone'] ?? $apiUser['telephone'] ?? null,
-                        ];
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Impossible de récupérer les utilisateurs pour le mapping', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
-            // Mapper les données pour le frontend (similaire à AdminBookingController)
+            // Résolution du client. L'API NestJS (formatBookingResponse) renvoie
+            // toujours `clientName` et `clientPhone` — ce dernier uniquement une fois
+            // la réservation confirmée par le propriétaire (coordination du séjour /
+            // remise des clés). Les autres branches ne servent que de garde-fou.
             $customerName = 'Client inconnu';
             $customerEmail = null;
-            $customerPhone = null;
-            
+            $customerPhone = $booking['clientPhone'] ?? null;
+
             if (isset($booking['user'])) {
                 $userData = $booking['user'];
                 $firstName = $userData['firstName'] ?? $userData['prenom'] ?? '';
@@ -376,15 +325,13 @@ class OwnerBookingController extends Controller
                     $customerName = $userData['email'] ?? 'Client inconnu';
                 }
                 $customerEmail = $userData['email'] ?? null;
-                $customerPhone = $userData['phone'] ?? $userData['telephone'] ?? null;
+                $customerPhone = $userData['phone'] ?? $userData['telephone'] ?? $customerPhone;
+            } elseif (!empty($booking['clientName']) && $booking['clientName'] !== 'Client Inconnu') {
+                $customerName = $booking['clientName'];
             } elseif (isset($booking['customer_name']) && !empty($booking['customer_name'])) {
                 $customerName = $booking['customer_name'];
             } elseif (isset($booking['customer']) && !empty($booking['customer'])) {
                 $customerName = $booking['customer'];
-            } elseif (isset($booking['clientId']) && isset($usersMap[$booking['clientId']])) {
-                $customerName = $usersMap[$booking['clientId']]['name'];
-                $customerEmail = $usersMap[$booking['clientId']]['email'];
-                $customerPhone = $usersMap[$booking['clientId']]['phone'];
             } elseif (isset($booking['clientId'])) {
                 $customerName = 'Client #' . substr($booking['clientId'], 0, 8);
             }

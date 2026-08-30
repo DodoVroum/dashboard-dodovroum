@@ -21,7 +21,8 @@ use Illuminate\Support\Str;
 class ImageProcessingService
 {
     private const MAX_WIDTH = 1920;
-    private const WEBP_QUALITY = 82;
+    private const RECOMPRESS_QUALITY = 82; // JPEG/WebP, ~80-85% visé
+    private const PNG_COMPRESSION_LEVEL = 6; // 0 (aucune) à 9 (max), 6 = compromis standard GD
     private const MAX_ORIGINAL_SIZE_BYTES = 20 * 1024 * 1024; // 20MB avant traitement
 
     private const RAW_EXTENSIONS = [
@@ -191,7 +192,74 @@ class ImageProcessingService
     private function encodeToWebp(\GdImage $image): string
     {
         ob_start();
-        $success = imagewebp($image, null, self::WEBP_QUALITY);
+        $success = imagewebp($image, null, self::RECOMPRESS_QUALITY);
+        $content = ob_get_clean();
+
+        if (!$success || $content === false) {
+            throw ImageUploadException::processingFailed();
+        }
+
+        return $content;
+    }
+
+    /**
+     * Redimensionne/recompresse une image DÉJÀ EN LIGNE en conservant son format
+     * d'origine (jamais de conversion, jamais de renommage) : utilisé par la
+     * commande de rétro-optimisation des images legacy (images:optimize), qui ne
+     * doit jamais changer une URL déjà référencée en base.
+     *
+     * @return array{content: string, width: int, height: int}|null null si le contenu
+     *         n'est pas une image décodable par GD (corrompu, ou format non supporté
+     *         comme un RAW qui aurait échappé à l'ancienne validation).
+     */
+    public function reoptimizeInPlace(string $binaryContent): ?array
+    {
+        $imageInfo = @getimagesizefromstring($binaryContent);
+        if ($imageInfo === false) {
+            return null;
+        }
+
+        $imageType = $imageInfo[2];
+        $tmpPath = tempnam(sys_get_temp_dir(), 'legacy_img_');
+        file_put_contents($tmpPath, $binaryContent);
+
+        $image = null;
+
+        try {
+            $image = $this->createGdImage($imageType, $tmpPath);
+            $image = $this->applyExifOrientation($image, $imageType, $tmpPath);
+            $image = $this->resizeIfNeeded($image);
+
+            $content = $this->encodeToSameFormat($image, $imageType);
+
+            return [
+                'content' => $content,
+                'width' => imagesx($image),
+                'height' => imagesy($image),
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Échec du retraitement en place d\'une image legacy', [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        } finally {
+            if ($image !== null) {
+                imagedestroy($image);
+            }
+            @unlink($tmpPath);
+        }
+    }
+
+    private function encodeToSameFormat(\GdImage $image, int $imageType): string
+    {
+        ob_start();
+        $success = match ($imageType) {
+            IMAGETYPE_JPEG => imagejpeg($image, null, self::RECOMPRESS_QUALITY),
+            IMAGETYPE_PNG => imagepng($image, null, self::PNG_COMPRESSION_LEVEL),
+            IMAGETYPE_GIF => imagegif($image),
+            IMAGETYPE_WEBP => imagewebp($image, null, self::RECOMPRESS_QUALITY),
+            default => false,
+        };
         $content = ob_get_clean();
 
         if (!$success || $content === false) {

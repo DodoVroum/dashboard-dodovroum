@@ -176,71 +176,7 @@
 
       <!-- Images -->
       <CollapsibleSection title="Images">
-        <div class="space-y-4">
-          <!-- Upload de fichier -->
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">
-              Uploader une image depuis votre PC
-            </label>
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              @change="handleFileUpload"
-              class="hidden"
-            />
-            <button
-              type="button"
-              @click="$refs.fileInput.click()"
-              :disabled="uploading"
-              class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
-            >
-              <svg v-if="!uploading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              <svg v-else class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ uploading ? 'Upload en cours...' : 'Choisir un fichier' }}
-            </button>
-          </div>
-
-          <!-- Prévisualisation des images -->
-          <div v-if="form.images && form.images.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div v-for="(image, index) in form.images" :key="index" class="relative group">
-              <div class="w-full h-32 rounded-lg border border-slate-300 overflow-hidden bg-slate-100 flex items-center justify-center">
-                <img
-                  v-if="!imageErrors[index]"
-                  :src="getStorageImageUrl(image, 'residences')"
-                  :alt="`Image ${index + 1}`"
-                  class="w-full h-full object-cover"
-                  @error="() => handleImageError(index)"
-                  @load="() => imageErrors[index] = false"
-                />
-                <div v-else class="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-                  <svg class="w-8 h-8 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p class="text-xs text-slate-500 break-all px-2" :title="image">{{ image.length > 50 ? image.substring(0, 50) + '...' : image }}</p>
-                  <p class="text-xs text-slate-400 mt-1">Image non accessible</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                @click.stop.prevent="removeImage(index)"
-                class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-90 hover:opacity-100 transition-opacity hover:bg-red-600 z-50 shadow-lg"
-                style="pointer-events: auto !important;"
-                title="Supprimer cette image"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-        </div>
+        <ResidenceImageUploader v-model="form.images" category="residences" />
       </CollapsibleSection>
 
       <!-- Statuts -->
@@ -327,11 +263,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import axios from 'axios';
-import { getStorageImageUrl } from '../../../utils/imageUrl';
 import OwnerLayout from '../../../Components/Layouts/OwnerLayout.vue';
 import CollapsibleSection from '../../../Components/CollapsibleSection.vue';
 import NumberStepper from '../../../Components/NumberStepper.vue';
+import ResidenceImageUploader from '../../../Components/ResidenceImageUploader.vue';
 
 defineOptions({
   layout: OwnerLayout,
@@ -404,9 +339,6 @@ const availableAmenities = [
 ];
 
 const newAmenity = ref('');
-const uploading = ref(false);
-const fileInput = ref<HTMLInputElement | null>(null);
-const imageErrors = ref<Record<number, boolean>>({});
 
 const addAmenity = () => {
   if (newAmenity.value.trim() && !form.amenities.includes(newAmenity.value.trim())) {
@@ -424,76 +356,6 @@ const customAmenities = computed(() =>
 
 const removeAmenity = (amenity: string) => {
   form.amenities = form.amenities.filter((a) => a !== amenity);
-};
-
-const handleFileUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  
-  if (!file) return;
-
-  // Vérifier la taille (5MB max)
-  if (file.size > 5 * 1024 * 1024) {
-    alert('Le fichier est trop volumineux. Taille maximale : 5MB');
-    return;
-  }
-
-  uploading.value = true;
-
-  try {
-    const formData = new FormData();
-    formData.append('image', file);
-
-    const response = await axios.post('/owner/images/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    if (response.data.success && response.data.url) {
-      form.images.push(response.data.url);
-    } else {
-      alert('Erreur lors de l\'upload de l\'image');
-    }
-  } catch (error: any) {
-    console.error('Erreur upload:', error);
-    alert('Erreur lors de l\'upload de l\'image: ' + (error.response?.data?.message || error.message));
-  } finally {
-    uploading.value = false;
-    if (fileInput.value) {
-      fileInput.value.value = '';
-    }
-  }
-};
-
-
-const handleImageError = (index: number) => {
-  // Marquer l'image comme ayant une erreur de chargement
-  imageErrors.value[index] = true;
-  console.warn(`Image ${index} ne peut pas être chargée:`, form.images[index]);
-};
-
-const removeImage = (index: number) => {
-  if (!form.images || index < 0 || index >= form.images.length) return;
-  
-  // Créer un nouveau tableau pour déclencher la réactivité
-  const newImages = [...form.images];
-  newImages.splice(index, 1);
-  form.images = newImages;
-  
-  // Supprimer l'erreur associée si elle existe
-  if (imageErrors.value[index] !== undefined) {
-    const newErrors: Record<number, boolean> = {};
-    Object.keys(imageErrors.value).forEach((key) => {
-      const keyNum = parseInt(key);
-      if (keyNum < index) {
-        newErrors[keyNum] = imageErrors.value[keyNum];
-      } else if (keyNum > index) {
-        newErrors[keyNum - 1] = imageErrors.value[keyNum];
-      }
-    });
-    imageErrors.value = newErrors;
-  }
 };
 
 const submit = () => {

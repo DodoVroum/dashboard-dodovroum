@@ -2,22 +2,25 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\ImageUploadException;
 use App\Http\Controllers\Controller;
 use App\Services\DodoVroumApi\AuthService;
+use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ImageUploadController extends Controller
 {
     protected AuthService $authService;
+    protected ImageProcessingService $imageProcessingService;
     protected string $baseUrl;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, ImageProcessingService $imageProcessingService)
     {
         $this->authService = $authService;
+        $this->imageProcessingService = $imageProcessingService;
         $this->baseUrl = config('services.dodovroum.api_url', 'http://localhost:3000/api');
     }
 
@@ -27,26 +30,46 @@ class ImageUploadController extends Controller
      */
     public function upload(Request $request)
     {
+        // La validation de format (RAW/DNG rejetés, HEIC, taille) est déléguée à
+        // ImageProcessingService pour renvoyer des messages clairs et spécifiques ;
+        // on ne garde ici qu'un plafond brut avant traitement.
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
+            'image' => 'required|file|max:20480', // 20MB max avant redimensionnement/compression
         ]);
 
         try {
             $file = $request->file('image');
-            
+
             // Déterminer la catégorie depuis le paramètre ou l'URL de la requête
             // Par défaut, utiliser 'residences' pour la compatibilité
             $category = $request->input('category', 'residences');
-            
+
             // Valider la catégorie
             $allowedCategories = ['residences', 'vehicles', 'users', 'combo-offers'];
             if (!in_array($category, $allowedCategories)) {
                 $category = 'residences'; // Fallback
             }
-            
+
+            try {
+                $processed = $this->imageProcessingService->process($file);
+            } catch (ImageUploadException $e) {
+                Log::info('Image rejetée à l\'upload', [
+                    'reason' => $e->getMessage(),
+                    'original_name' => $file->getClientOriginalName(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], $e->getStatusCode());
+            }
+
+            $fileContent = $processed['content'];
+            $fileName = $processed['filename'];
+            $mimeType = $processed['mime'];
+
             // Obtenir le token d'authentification
             $token = $this->authService->getAccessToken();
-            
+
             if (!$token) {
                 Log::error('Impossible d\'obtenir le token pour l\'upload d\'image');
                 return response()->json([
@@ -54,35 +77,31 @@ class ImageUploadController extends Controller
                     'message' => 'Erreur d\'authentification',
                 ], 401);
             }
-            
+
             // Préparer la requête multipart/form-data pour NestJS
             // Essayer plusieurs routes possibles selon la configuration NestJS
             // Routes possibles : /upload, /upload/single, /upload/image, /files/upload
             $uploadRoute = config('services.dodovroum.upload_route', 'upload/single');
-            
+
             // Utiliser l'URL locale si disponible, sinon l'URL publique
             // Pour la communication inter-serveur, l'IP locale est plus fiable
             $apiBaseUrl = config('services.dodovroum.api_url_local', $this->baseUrl);
             $uploadUrl = "{$apiBaseUrl}/{$uploadRoute}";
-            
-            $fileContent = file_get_contents($file->getRealPath());
-            $fileName = $file->getClientOriginalName();
-            $mimeType = $file->getMimeType();
-            
+
             Log::debug('Upload image vers NestJS - Préparation', [
                 'url' => $uploadUrl,
                 'base_url' => $apiBaseUrl,
                 'route_config' => $uploadRoute,
                 'category' => $category,
                 'filename' => $fileName,
-                'size' => $file->getSize(),
-                'size_mb' => round($file->getSize() / 1024 / 1024, 2),
+                'size' => strlen($fileContent),
+                'size_mb' => round(strlen($fileContent) / 1024 / 1024, 2),
                 'mime_type' => $mimeType,
                 'field_name' => 'file', // NestJS attend 'file'
                 'has_token' => !empty($token),
                 'token_preview' => $token ? substr($token, 0, 20) . '...' : null,
             ]);
-            
+
             // Envoyer le fichier à NestJS avec la catégorie
             // Laravel Http::attach() attend : nom du champ, contenu du fichier, nom du fichier
             // IMPORTANT : Le nom du champ doit être 'file' pour correspondre à @FileInterceptor('file') dans NestJS
@@ -116,8 +135,8 @@ class ImageUploadController extends Controller
                             'Authorization' => "Bearer {$token}",
                             'Accept' => 'application/json',
                         ])
-                        ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName(), [
-                            'Content-Type' => $file->getMimeType(),
+                        ->attach('file', $fileContent, $fileName, [
+                            'Content-Type' => $mimeType,
                         ])
                         ->post($uploadUrl, [
                             'category' => $category,
@@ -205,8 +224,8 @@ class ImageUploadController extends Controller
                     // Fallback : stocker localement si NestJS n'a pas la route
                     Log::info('Fallback : stockage local Laravel activé car route NestJS non disponible');
                     try {
-                        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-                        $path = $file->storeAs('residences', $filename, 'public');
+                        $path = 'residences/' . $fileName;
+                        Storage::disk('public')->put($path, $fileContent);
                         $baseUrl = $request->getSchemeAndHttpHost();
                         $url = $baseUrl . '/storage/' . $path;
                         

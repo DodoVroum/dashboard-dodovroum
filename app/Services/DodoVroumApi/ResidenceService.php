@@ -146,6 +146,9 @@ class ResidenceService extends BaseApiService
             $dataForApi['pricePerDay'] = (float) $dataForApi['pricePerDay'];
         }
         
+        if (isset($dataForApi['nombrePieces'])) {
+            $dataForApi['nombrePieces'] = (int) $dataForApi['nombrePieces'];
+        }
         if (isset($dataForApi['bedrooms'])) {
             $dataForApi['bedrooms'] = (int) $dataForApi['bedrooms'];
         }
@@ -297,6 +300,9 @@ class ResidenceService extends BaseApiService
             $dataForApi['pricePerDay'] = (float) $dataForApi['pricePerDay'];
         }
         
+        if (isset($dataForApi['nombrePieces'])) {
+            $dataForApi['nombrePieces'] = (int) $dataForApi['nombrePieces'];
+        }
         if (isset($dataForApi['bedrooms'])) {
             $dataForApi['bedrooms'] = (int) $dataForApi['bedrooms'];
         }

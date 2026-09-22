@@ -200,7 +200,16 @@
 
       <!-- Caractéristiques -->
       <CollapsibleSection title="Caractéristiques">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <NumberStepper
+              v-model="form.nombrePieces"
+              label="Nombre de pièces *"
+              :min="1"
+            />
+            <p v-if="errors.nombrePieces" class="text-red-600 text-sm mt-1">{{ errors.nombrePieces }}</p>
+          </div>
+
           <div>
             <NumberStepper
               v-model="form.bedrooms"
@@ -284,6 +293,7 @@ const form = useForm({
   city: '',
   country: "Côte d'Ivoire",
   pricePerNight: 0,
+  nombrePieces: 1,
   bedrooms: 0,
   bathrooms: 0,
   capacity: 1,

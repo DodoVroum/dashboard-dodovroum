@@ -195,7 +195,16 @@
 
       <!-- Caractéristiques -->
       <CollapsibleSection title="Caractéristiques">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <NumberStepper
+              v-model="form.nombrePieces"
+              label="Nombre de pièces *"
+              :min="1"
+            />
+            <p v-if="errors.nombrePieces" class="text-red-600 text-sm mt-1">{{ errors.nombrePieces }}</p>
+          </div>
+
           <div>
             <NumberStepper
               v-model="form.bedrooms"
@@ -289,6 +298,7 @@ const props = defineProps<{
     pricePerNight?: number;
     price?: number;
     prixParNuit?: number;
+    nombrePieces?: number | null;
     bedrooms?: number;
     nombreChambres?: number;
     bathrooms?: number;
@@ -312,6 +322,8 @@ const form = useForm({
   city: props.residence.city || props.residence.ville || '',
   country: props.residence.country || props.residence.pays || '',
   pricePerNight: props.residence.pricePerNight || props.residence.price || props.residence.prixParNuit || 0,
+  // Vide pour les résidences antérieures au champ : à renseigner avant d'enregistrer
+  nombrePieces: props.residence.nombrePieces ?? null,
   bedrooms: props.residence.bedrooms || props.residence.nombreChambres || 0,
   bathrooms: props.residence.bathrooms || props.residence.nombreSallesBain || 0,
   capacity: props.residence.capacity || props.residence.capacite || 1,

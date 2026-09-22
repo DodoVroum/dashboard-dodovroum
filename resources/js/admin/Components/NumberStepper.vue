@@ -5,16 +5,16 @@
       <button
         type="button"
         class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
-        :disabled="min !== undefined && modelValue <= min"
+        :disabled="modelValue === null || (min !== undefined && modelValue <= min)"
         aria-label="Diminuer"
-        @click="setValue(modelValue - step)"
+        @click="modelValue !== null && setValue(modelValue - step)"
       >
         <Minus class="w-4 h-4" />
       </button>
 
       <input
         type="number"
-        :value="modelValue"
+        :value="modelValue ?? ''"
         :min="min"
         :max="max"
         :step="step"
@@ -25,9 +25,9 @@
       <button
         type="button"
         class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
-        :disabled="max !== undefined && modelValue >= max"
+        :disabled="modelValue !== null && max !== undefined && modelValue >= max"
         aria-label="Augmenter"
-        @click="setValue(modelValue + step)"
+        @click="setValue(modelValue === null ? (min ?? 0) : modelValue + step)"
       >
         <Plus class="w-4 h-4" />
       </button>
@@ -40,7 +40,8 @@ import { Minus, Plus } from 'lucide-vue-next';
 
 const props = withDefaults(
   defineProps<{
-    modelValue: number;
+    // null = aucune valeur saisie (ex. donnée absente sur une annonce existante)
+    modelValue: number | null;
     min?: number;
     max?: number;
     step?: number;

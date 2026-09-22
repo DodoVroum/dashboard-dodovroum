@@ -18,7 +18,19 @@ use Inertia\Response;
 class OwnerResidenceController extends Controller
 {
     use HasProprietaireId;
-    
+
+    // Le reste du payload propriétaire est validé par l'API NestJS ; le nombre
+    // de pièces y est optionnel (compatibilité mobile), il est donc imposé ici.
+    private const NOMBRE_PIECES_RULES = [
+        'nombrePieces' => 'required|integer|min:1',
+    ];
+
+    private const NOMBRE_PIECES_MESSAGES = [
+        'nombrePieces.required' => 'Le nombre de pièces est obligatoire.',
+        'nombrePieces.integer' => 'Le nombre de pièces doit être un nombre entier.',
+        'nombrePieces.min' => 'Le nombre de pièces doit être d\'au moins 1.',
+    ];
+
     protected DodoVroumApiService $apiService;
     protected ResidenceService $residenceService;
 
@@ -469,6 +481,8 @@ class OwnerResidenceController extends Controller
             ])->withInput();
         }
 
+        $request->validate(self::NOMBRE_PIECES_RULES, self::NOMBRE_PIECES_MESSAGES);
+
         $data = $request->all();
         $data['proprietaireId'] = $proprietaireId;
 
@@ -483,6 +497,7 @@ class OwnerResidenceController extends Controller
             'city'            => $data['city'] ?? null,
             'country'         => $data['country'] ?? null,
             'pricePerNight'   => $data['pricePerNight'] ?? null,
+            'nombrePieces'    => $data['nombrePieces'] ?? null,
             'bedrooms'        => $data['bedrooms'] ?? null,
             'bathrooms'       => $data['bathrooms'] ?? null,
             'capacity'        => $data['capacity'] ?? null,
@@ -665,6 +680,8 @@ class OwnerResidenceController extends Controller
             ]);
             abort(403, 'Vous n\'êtes pas autorisé à modifier cette résidence');
         }
+
+        $request->validate(self::NOMBRE_PIECES_RULES, self::NOMBRE_PIECES_MESSAGES);
 
         try {
             // Récupérer les données et tronquer la description si nécessaire

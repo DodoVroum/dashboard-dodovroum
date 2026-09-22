@@ -46,6 +46,8 @@ class ResidenceMapper
             'country' => $residence['pays'] ?? $residence['country'] ?? null,
             'pricePerNight' => $residence['prixParNuit'] ?? $residence['pricePerNight'] ?? $residence['price'] ?? 0,
             'price' => $residence['prixParNuit'] ?? $residence['pricePerNight'] ?? $residence['price'] ?? 0,
+            // null (et non 0) : les résidences antérieures au champ n'ont pas de valeur
+            'nombrePieces' => $residence['nombrePieces'] ?? null,
             'bedrooms' => $residence['nombreChambres'] ?? $residence['bedrooms'] ?? $residence['chambres'] ?? $residence['nbChambres'] ?? $residence['rooms'] ?? 0,
             'nombreChambres' => $residence['nombreChambres'] ?? $residence['bedrooms'] ?? $residence['chambres'] ?? $residence['nbChambres'] ?? $residence['rooms'] ?? 0,
             'bathrooms' => $residence['nombreSallesBain'] ?? $residence['bathrooms'] ?? $residence['sallesBain'] ?? $residence['nbSallesBain'] ?? 0,
@@ -272,6 +274,9 @@ class ResidenceMapper
             // Prix par jour - OBLIGATOIRE pour Prisma (seul champ prix accepté)
             'pricePerDay' => self::extractPrice($data),
             
+            // Nombre de pièces (distinct du nombre de chambres)
+            'nombrePieces' => $data['nombrePieces'] ?? null,
+
             // Chambres - priorité: bedrooms > nombreChambres
             'bedrooms' => $data['bedrooms'] ?? $data['nombreChambres'] ?? null,
             

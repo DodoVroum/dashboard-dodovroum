@@ -221,6 +221,12 @@
               </p>
             </div>
             <div class="min-w-0">
+              <p class="text-sm text-slate-500 mb-1">Nombre de pièces</p>
+              <p class="font-medium text-slate-900 break-words">
+                {{ residence?.nombrePieces ?? 'Non renseigné' }}
+              </p>
+            </div>
+            <div class="min-w-0">
               <p class="text-sm text-slate-500 mb-1">Nombre de chambres</p>
               <p class="font-medium text-slate-900 break-words">
                 {{ residence?.bedrooms || residence?.nombreChambres || 0 }}
@@ -475,6 +481,7 @@ const props = defineProps<{
     price?: number;
     capacity?: number;
     capacite?: number;
+    nombrePieces?: number | null;
     bedrooms?: number;
     nombreChambres?: number;
     bathrooms?: number;

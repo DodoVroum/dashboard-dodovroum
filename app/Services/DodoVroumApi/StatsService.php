@@ -3,6 +3,7 @@
 namespace App\Services\DodoVroumApi;
 
 use App\Services\DodoVroumApi\BaseApiService;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -61,6 +62,54 @@ class StatsService extends BaseApiService
             
             return null;
         }
+    }
+
+    /**
+     * Revenus encaissés du propriétaire connecté (scope JWT) : paiements COMPLETED
+     * non marqués à rembourser ; monthRevenue selon la date d'encaissement.
+     *
+     * GET /stats renvoie un objet sans `id` ({ success, data: {...} }) : il ne peut
+     * pas passer par get() / ApiResponseNormalizer::data(), qui ne conserve que des
+     * listes d'entités identifiées et renverrait un tableau vide.
+     *
+     * @return array{totalRevenue: float, monthRevenue: float}|null null si indisponible
+     */
+    public function getOwnerRevenue(): ?array
+    {
+        $token = $this->getAuthToken();
+        if (! $token) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)->withToken($token)->acceptJson()->get("{$this->baseUrl}/stats");
+        } catch (\Throwable $e) {
+            Log::warning('GET /stats injoignable (revenus encaissés)', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('GET /stats en échec (revenus encaissés)', ['status' => $response->status()]);
+
+            return null;
+        }
+
+        $payload = $response->json();
+        $stats = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
+
+        if (! is_array($stats) || ! isset($stats['totalRevenue'], $stats['monthRevenue'])) {
+            Log::warning('GET /stats sans totalRevenue / monthRevenue', [
+                'keys' => is_array($stats) ? array_keys($stats) : null,
+            ]);
+
+            return null;
+        }
+
+        return [
+            'totalRevenue' => (float) $stats['totalRevenue'],
+            'monthRevenue' => (float) $stats['monthRevenue'],
+        ];
     }
 
     /**

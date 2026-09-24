@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Owner\Concerns\HasProprietaireId;
 use App\Services\DodoVroumApiService;
 use App\Services\DodoVroumApi\BookingService;
+use App\Services\DodoVroumApi\StatsService;
 use App\Services\DodoVroumApi\ResidenceService;
 use App\Services\DodoVroumApi\VehicleService;
 use App\Services\BookingOwnerScopeService;
@@ -29,18 +30,22 @@ class OwnerBookingController extends Controller
 
     protected BookingOwnerScopeService $bookingOwnerScopeService;
 
+    protected StatsService $statsService;
+
     public function __construct(
         DodoVroumApiService $apiService,
         BookingService $bookingService,
         ResidenceService $residenceService,
         VehicleService $vehicleService,
-        BookingOwnerScopeService $bookingOwnerScopeService
+        BookingOwnerScopeService $bookingOwnerScopeService,
+        StatsService $statsService
     ) {
         $this->apiService = $apiService;
         $this->bookingService = $bookingService;
         $this->residenceService = $residenceService;
         $this->vehicleService = $vehicleService;
         $this->bookingOwnerScopeService = $bookingOwnerScopeService;
+        $this->statsService = $statsService;
     }
 
     /**
@@ -82,10 +87,6 @@ class OwnerBookingController extends Controller
             $confirmedBookings = 0;
             $pendingBookings = 0;
             $cancelledBookings = 0;
-            $totalRevenue = 0;
-            $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
 
             foreach ($bookings as $booking) {
                 $ownerConfirmedAt = $booking['ownerConfirmedAt'] ?? $booking['owner_confirmed_at'] ?? null;
@@ -100,16 +101,12 @@ class OwnerBookingController extends Controller
                 } else {
                     $pendingBookings++;
                 }
-
-                $price = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-                $totalRevenue += $price;
-                
-                // Revenus du mois
-                $startDate = $booking['startDate'] ?? $booking['start_date'] ?? null;
-                if ($startDate && strpos($startDate, $currentMonth) === 0) {
-                    $monthRevenue += $price;
-                }
             }
+
+            // Revenus = argent réellement encaissé, calculé par l'API sur les biens du
+            // propriétaire connecté (JWT) : paiements COMPLETED non marqués à rembourser,
+            // date d'encaissement (paidAt) pour le mois. Jamais le totalPrice des réservations.
+            ['totalRevenue' => $totalRevenue, 'monthRevenue' => $monthRevenue] = $this->collectedRevenue();
 
             // Mapper les réservations pour le frontend AVANT la pagination
             $mappedBookings = array_map(function ($booking) {
@@ -274,6 +271,18 @@ class OwnerBookingController extends Controller
                 ],
             ]);
         }
+    }
+
+    /**
+     * Revenus encaissés du propriétaire connecté, fournis par GET /api/stats.
+     * En cas d'indisponibilité de l'API : 0 plutôt qu'un montant non encaissé.
+     *
+     * @return array{totalRevenue: float, monthRevenue: float}
+     */
+    private function collectedRevenue(): array
+    {
+        return $this->statsService->getOwnerRevenue()
+            ?? ['totalRevenue' => 0.0, 'monthRevenue' => 0.0];
     }
 
     /**

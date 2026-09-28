@@ -517,6 +517,7 @@ const props = defineProps<{
     ownerConfirmedAt?: string | null;
     checkOutAt?: string | null;
     isStayInProgress?: boolean;
+    canConfirmCheckOut?: boolean;
     ownerId?: string | null;
     ownerName?: string | null;
     ownerPhone?: string | null;
@@ -777,15 +778,8 @@ const handleConfirmBooking = () => {
   });
 };
 
-const canShowManualCheckOut = computed(() => {
-  const b = props.booking;
-  if (b.checkOutAt) return false;
-  if (b.isStayInProgress === true) return true;
-  if (b.keyRetrievedAt && b.endDate) {
-    return !isDatePast(b.endDate);
-  }
-  return false;
-});
+/** Séjour en cours (clés remises) non clôturé : calculé par le serveur, quelle que soit la date. */
+const canShowManualCheckOut = computed(() => props.booking.canConfirmCheckOut === true);
 
 const handleManualCheckOut = () => {
   if (!confirm('Confirmer le départ ? Cela clôturera officiellement la réservation.')) return;

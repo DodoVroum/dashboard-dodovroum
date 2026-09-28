@@ -513,6 +513,9 @@ class OwnerBookingController extends Controller
                 'ownerConfirmedAt' => $ownerConfirmedAt,
                 'checkOutAt' => $booking['checkOutAt'] ?? $booking['check_out_at'] ?? null,
                 'isStayInProgress' => $isStayInProgress,
+                // Départ confirmable : séjour en cours (clés remises) non clôturé, quelle que soit la date.
+                'canConfirmCheckOut' => empty($booking['checkOutAt'] ?? $booking['check_out_at'] ?? null)
+                    && in_array(strtolower((string) ($booking['status'] ?? '')), ['encourssejour', 'en_cours_sejour', 'ongoing'], true),
                 'ownerId' => $booking['ownerId'] ?? null,
                 'reviewId' => $booking['reviewId'] ?? null,
             ];

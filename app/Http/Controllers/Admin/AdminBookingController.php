@@ -1274,6 +1274,9 @@ class AdminBookingController extends Controller
                 'keyRetrievedAt' => $booking['keyRetrievedAt'] ?? $booking['key_retrieved_at'] ?? null,
                 'ownerConfirmedAt' => $booking['ownerConfirmedAt'] ?? $booking['owner_confirmed_at'] ?? null,
                 'checkOutAt' => $booking['checkOutAt'] ?? $booking['check_out_at'] ?? null,
+                // Départ confirmable : séjour en cours (clés remises) non clôturé, quelle que soit la date.
+                'canConfirmCheckOut' => empty($booking['checkOutAt'] ?? $booking['check_out_at'] ?? null)
+                    && in_array(strtolower((string) ($booking['status'] ?? '')), ['encourssejour', 'en_cours_sejour', 'ongoing'], true),
                 'ownerId' => $resolvedOwnerId ?? ($booking['ownerId'] ?? null),
                 'ownerName' => $ownerName,
                 'ownerPhone' => $ownerPhone,

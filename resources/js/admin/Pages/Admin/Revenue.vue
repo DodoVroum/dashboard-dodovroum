@@ -47,9 +47,21 @@
         <div class="flex items-center justify-between mb-8">
           <div>
             <h3 class="font-black text-xl text-slate-900 tracking-tight">Flux de Trésorerie</h3>
-            <p class="text-sm text-slate-500">Évolution mensuelle des commissions (FCFA)</p>
+            <p class="text-sm text-slate-500">
+              Commissions par mois de confirmation · Total {{ chartYear }} : {{ formatPrice(props.stats?.chartYearTotal ?? 0) }}
+            </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 text-xs font-bold text-slate-600">
+              Année
+              <select
+                :value="chartYear"
+                class="border border-slate-200 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
+                @change="changeYear(Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option v-for="y in availableYears" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </label>
             <a
               :href="exportCsvHref"
               class="px-4 py-2 text-xs font-bold bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center"
@@ -124,6 +136,9 @@ interface DashboardStats {
   chartData: Array<{ month: string; total: number }>;
   volumeRealized: number;
   volumeRealizedThisMonth: number;
+  chartYear: number;
+  chartYearTotal: number;
+  availableYears: number[];
 }
 
 /** --- Props & State --- */
@@ -148,7 +163,17 @@ let dataPollingTimer: ReturnType<typeof setInterval> | undefined;
 
 /** URL d’export : `window.route` si présent (ex. Ziggy chargé ailleurs) ; sinon URL Laravel connue. */
 const FALLBACK_ADMIN_EXPORT_CSV = '/admin/revenue/export.csv';
-const exportCsvHref = computed((): string => {
+
+/** Année affichée dans le graphique (commissions au mois de la confirmation du propriétaire). */
+const chartYear = computed(() => props.stats?.chartYear ?? new Date().getFullYear());
+const availableYears = computed(() => props.stats?.availableYears ?? [chartYear.value]);
+const changeYear = (year: number) => {
+  router.get('/admin/revenue', { year }, { preserveScroll: true, preserveState: true, only: ['stats'] });
+};
+
+/** Export CSV de l'année affichée. */
+const exportCsvHref = computed((): string => `${baseExportCsvHref.value}?year=${chartYear.value}`);
+const baseExportCsvHref = computed((): string => {
   if (typeof window === 'undefined') {
     return FALLBACK_ADMIN_EXPORT_CSV;
   }

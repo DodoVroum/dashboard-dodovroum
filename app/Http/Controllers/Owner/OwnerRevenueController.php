@@ -8,12 +8,15 @@ use App\Services\BookingOwnerScopeService;
 use App\Services\DodoVroumApiService;
 use App\Support\BookingFinance;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OwnerRevenueController extends Controller
 {
+    private const MONTH_LABELS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+
     use HasProprietaireId;
 
     public function __construct(
@@ -25,9 +28,12 @@ class OwnerRevenueController extends Controller
     /**
      * Afficher la page des revenus avec statistiques détaillées
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $user = auth()->user();
+        // Année affichée dans le graphique (année en cours par défaut, jamais dans le futur).
+        $year = min((int) $request->query('year', (string) Carbon::now()->year), Carbon::now()->year);
+        $year = max($year, 2000);
 
         try {
             // Récupérer le proprietaireId réel depuis les données utilisateur
@@ -92,7 +98,7 @@ class OwnerRevenueController extends Controller
             }
             
             // Calculer les statistiques de revenus
-            $stats = $this->calculateRevenueStats($residences, $vehicles, $bookings);
+            $stats = $this->calculateRevenueStats($residences, $vehicles, $bookings, $year);
             
         } catch (\Exception $e) {
             Log::error('Erreur récupération données revenus propriétaire', ['error' => $e->getMessage()]);
@@ -108,7 +114,7 @@ class OwnerRevenueController extends Controller
     /**
      * Revenus propriétaire (90 %) : même logique « safe » que l’admin (éligibilité, max(0), Carbon).
      */
-    private function calculateRevenueStats(array $residences, array $vehicles, array $bookings): array
+    private function calculateRevenueStats(array $residences, array $vehicles, array $bookings, int $year): array
     {
         $now = Carbon::now();
         $lastMonth = $now->copy()->subMonth();
@@ -129,13 +135,13 @@ class OwnerRevenueController extends Controller
             }
         }
 
+        // Graphique : les 12 mois (janvier → décembre) de l'année demandée.
         $chartBuckets = [];
-        $months = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $monthDate = $now->copy()->subMonths($i);
-            $months[] = $monthDate->format('M');
-            $chartBuckets[$monthDate->format('Y-m')] = 0.0;
+        for ($m = 1; $m <= 12; $m++) {
+            $chartBuckets[sprintf('%04d-%02d', $year, $m)] = 0.0;
         }
+        // Années proposées : année en cours + années ayant des revenus réalisés.
+        $yearsWithRevenue = [$now->year => true];
 
         $totalRevenue = 0.0;
         $revenueThisMonth = 0.0;
@@ -162,6 +168,7 @@ class OwnerRevenueController extends Controller
             if ($realizedAt) {
                 $realizedAt = Carbon::instance($realizedAt)->utc();
                 $monthKey = $realizedAt->format('Y-m');
+                $yearsWithRevenue[(int) $realizedAt->format('Y')] = true;
                 if (array_key_exists($monthKey, $chartBuckets)) {
                     $chartBuckets[$monthKey] += $ownerPayment;
                 }
@@ -205,13 +212,14 @@ class OwnerRevenueController extends Controller
         }
 
         $chartDataArray = [];
-        foreach ($months as $index => $month) {
-            $monthKey = $now->copy()->subMonths(5 - $index)->format('Y-m');
+        foreach (array_values($chartBuckets) as $index => $total) {
             $chartDataArray[] = [
-                'month' => $month,
-                'total' => (int) round(max(0.0, $chartBuckets[$monthKey] ?? 0.0)),
+                'month' => self::MONTH_LABELS[$index],
+                'total' => (int) round(max(0.0, $total)),
             ];
         }
+        $availableYears = array_keys($yearsWithRevenue + [$year => true]);
+        rsort($availableYears);
 
         return [
             'totalRevenue' => round(max(0.0, $totalRevenue), 2),
@@ -226,6 +234,9 @@ class OwnerRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => $chartDataArray,
+            'chartYear' => $year,
+            'chartYearTotal' => (int) round(array_sum(array_column($chartDataArray, 'total'))),
+            'availableYears' => $availableYears,
             // Payée et/ou confirmée, en attente de la remise des clés.
             'pendingRevenue' => BookingFinance::ownerPending($bookings),
         ];
@@ -249,6 +260,9 @@ class OwnerRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => [],
+            'chartYear' => Carbon::now()->year,
+            'chartYearTotal' => 0,
+            'availableYears' => [Carbon::now()->year],
             'pendingRevenue' => 0,
         ];
     }

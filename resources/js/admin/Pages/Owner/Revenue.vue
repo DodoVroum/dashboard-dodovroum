@@ -56,7 +56,24 @@
 
     <!-- Graphique de Croissance -->
     <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-      <h3 class="font-bold text-lg mb-6 text-slate-900">Évolution des revenus réalisés</h3>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+          <h3 class="font-bold text-lg text-slate-900">Évolution des revenus réalisés</h3>
+          <p class="text-sm text-slate-500">
+            Total {{ stats.chartYear }} : {{ formatPrice(stats.chartYearTotal ?? 0) }} FCFA
+          </p>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+          Année
+          <select
+            :value="stats.chartYear"
+            class="border border-slate-300 rounded-lg px-3 py-2 min-h-[44px] bg-white focus:ring-2 focus:ring-blue-500"
+            @change="changeYear(Number(($event.target as HTMLSelectElement).value))"
+          >
+            <option v-for="y in stats.availableYears" :key="y" :value="y">{{ y }}</option>
+          </select>
+        </label>
+      </div>
       <div v-if="loading" class="h-[350px] flex items-center justify-center">
         <div class="text-slate-400">Chargement des données...</div>
       </div>
@@ -99,6 +116,9 @@ const props = defineProps<{
       properties: number;
     };
     chartData?: Array<{ month: string; total: number }>;
+    chartYear?: number;
+    chartYearTotal?: number;
+    availableYears?: number[];
     pendingRevenue?: number;
   };
 }>();
@@ -134,9 +154,17 @@ const stats = computed(() => {
       properties: 0,
     },
     chartData: [],
+    chartYear: new Date().getFullYear(),
+    chartYearTotal: 0,
+    availableYears: [new Date().getFullYear()],
     pendingRevenue: 0,
   };
 });
+
+/** Graphique : afficher les 12 mois d'une autre année (revenus réalisés à la remise des clés). */
+const changeYear = (year: number) => {
+  router.get('/owner/revenue', { year }, { preserveScroll: true, preserveState: true, only: ['stats'] });
+};
 
 // Formatage des prix en FCFA
 const formatPrice = (value: number | string): string => {

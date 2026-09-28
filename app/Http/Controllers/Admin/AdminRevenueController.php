@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\DodoVroumApiService;
 use App\Support\BookingFinance;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminRevenueController extends Controller
 {
+    private const MONTH_LABELS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
     public function __construct(
         protected DodoVroumApiService $apiService
@@ -22,10 +24,10 @@ class AdminRevenueController extends Controller
     /**
      * Afficher la page des revenus avec statistiques détaillées pour l'admin
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         try {
-            $stats = $this->fetchAdminRevenueStats();
+            $stats = $this->fetchAdminRevenueStats($this->chartYear($request));
         } catch (\Exception $e) {
             Log::error('Erreur récupération données revenus admin', ['error' => $e->getMessage()]);
 
@@ -47,18 +49,19 @@ class AdminRevenueController extends Controller
     }
 
     /**
-     * Export CSV des commissions (même périmètre que le graphique admin).
+     * Export CSV des commissions de l'année affichée dans le graphique (?year=).
      */
-    public function exportCsv(): StreamedResponse
+    public function exportCsv(Request $request): StreamedResponse
     {
+        $year = $this->chartYear($request);
         try {
-            $stats = $this->fetchAdminRevenueStats();
+            $stats = $this->fetchAdminRevenueStats($year);
         } catch (\Exception $e) {
             Log::error('Erreur export CSV revenus admin', ['error' => $e->getMessage()]);
             $stats = $this->getDefaultStats();
         }
 
-        $filename = 'commissions-dodovroum-'.date('Y-m-d').'.csv';
+        $filename = 'commissions-dodovroum-'.$year.'.csv';
 
         return response()->streamDownload(function () use ($stats) {
             $out = fopen('php://output', 'w');
@@ -66,13 +69,14 @@ class AdminRevenueController extends Controller
                 return;
             }
             fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
-            fputcsv($out, ['Mois', 'Commissions DodoVroum (10 %) — FCFA'], ';');
+            fputcsv($out, ['Mois '.($stats['chartYear'] ?? ''), 'Commissions DodoVroum (10 %) — FCFA'], ';');
             foreach ($stats['chartData'] ?? [] as $row) {
                 fputcsv($out, [$row['month'] ?? '', $row['total'] ?? 0], ';');
             }
             fputcsv($out, []);
-            fputcsv($out, ['Total sur la période affichée (graphique)', $stats['totalRevenue'] ?? 0], ';');
-            fputcsv($out, ['Réservations comptabilisées', $stats['totalBookings'] ?? 0], ';');
+            fputcsv($out, ['Total '.($stats['chartYear'] ?? ''), $stats['chartYearTotal'] ?? 0], ';');
+            fputcsv($out, ['Total toutes années', $stats['totalRevenue'] ?? 0], ';');
+            fputcsv($out, ['Réservations comptabilisées (toutes années)', $stats['totalBookings'] ?? 0], ';');
             fclose($out);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -82,19 +86,27 @@ class AdminRevenueController extends Controller
     /**
      * @throws \Throwable
      */
-    private function fetchAdminRevenueStats(): array
+    /** Année affichée dans le graphique : année en cours par défaut, jamais dans le futur. */
+    private function chartYear(Request $request): int
+    {
+        $year = min((int) $request->query('year', (string) Carbon::now()->year), Carbon::now()->year);
+
+        return max($year, 2000);
+    }
+
+    private function fetchAdminRevenueStats(int $year): array
     {
         $allResidences = $this->apiService->getResidences([]);
         $allVehicles = $this->apiService->getVehicles([]);
         $allBookings = $this->apiService->getBookings([]);
 
-        return $this->calculateRevenueStats($allResidences, $allVehicles, $allBookings);
+        return $this->calculateRevenueStats($allResidences, $allVehicles, $allBookings, $year);
     }
 
     /**
      * Commissions agrégées : uniquement réservations éligibles, montants non négatifs, dates sécurisées (Carbon).
      */
-    private function calculateRevenueStats(array $residences, array $vehicles, array $bookings): array
+    private function calculateRevenueStats(array $residences, array $vehicles, array $bookings, int $year): array
     {
         $now = Carbon::now();
         $lastMonth = $now->copy()->subMonth();
@@ -115,14 +127,13 @@ class AdminRevenueController extends Controller
             }
         }
 
+        // Graphique : les 12 mois (janvier → décembre) de l'année demandée.
         $chartBuckets = [];
-        $months = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $monthDate = $now->copy()->subMonths($i);
-            $monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-            $months[] = $monthNames[$monthDate->month - 1] ?? $monthDate->format('M');
-            $chartBuckets[$monthDate->format('Y-m')] = 0.0;
+        for ($m = 1; $m <= 12; $m++) {
+            $chartBuckets[sprintf('%04d-%02d', $year, $m)] = 0.0;
         }
+        // Années proposées : année en cours + années ayant des commissions.
+        $yearsWithRevenue = [$now->year => true];
 
         $totalRevenue = 0.0;
         $revenueThisMonth = 0.0;
@@ -149,6 +160,7 @@ class AdminRevenueController extends Controller
             if ($realizedAt) {
                 $realizedAt = Carbon::instance($realizedAt)->utc();
                 $monthKey = $realizedAt->format('Y-m');
+                $yearsWithRevenue[(int) $realizedAt->format('Y')] = true;
                 if (array_key_exists($monthKey, $chartBuckets)) {
                     $chartBuckets[$monthKey] += $commission;
                 }
@@ -196,13 +208,14 @@ class AdminRevenueController extends Controller
         }
 
         $chartDataArray = [];
-        foreach ($months as $index => $month) {
-            $monthKey = $now->copy()->subMonths(5 - $index)->format('Y-m');
+        foreach (array_values($chartBuckets) as $index => $total) {
             $chartDataArray[] = [
-                'month' => $month,
-                'total' => (int) round(max(0.0, $chartBuckets[$monthKey] ?? 0.0)),
+                'month' => self::MONTH_LABELS[$index],
+                'total' => (int) round(max(0.0, $total)),
             ];
         }
+        $availableYears = array_keys($yearsWithRevenue + [$year => true]);
+        rsort($availableYears);
 
         return [
             'totalRevenue' => round(max(0.0, $totalRevenue), 2),
@@ -217,6 +230,9 @@ class AdminRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => $chartDataArray,
+            'chartYear' => $year,
+            'chartYearTotal' => (int) round(array_sum(array_column($chartDataArray, 'total'))),
+            'availableYears' => $availableYears,
             // Volume des réservations confirmées (100 % du totalPrice).
             'volumeRealized' => BookingFinance::platformRealized($bookings)['bookingValue'],
             'volumeRealizedThisMonth' => BookingFinance::platformRealized($bookings, BookingFinance::monthStart())['bookingValue'],
@@ -241,6 +257,9 @@ class AdminRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => [],
+            'chartYear' => Carbon::now()->year,
+            'chartYearTotal' => 0,
+            'availableYears' => [Carbon::now()->year],
             'volumeRealized' => 0,
             'volumeRealizedThisMonth' => 0,
         ];

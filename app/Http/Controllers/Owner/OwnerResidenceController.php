@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class OwnerResidenceController extends Controller
 {
@@ -205,9 +206,8 @@ class OwnerResidenceController extends Controller
             $availableResidences = 0;
             $totalBookings = 0;
             $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
-            
+            $residenceBookings = [];
+
             foreach ($residences as $residence) {
                 if (($residence['available'] ?? $residence['isActive'] ?? true) === true) {
                     $availableResidences++;
@@ -230,14 +230,12 @@ class OwnerResidenceController extends Controller
                         (is_numeric($bookingProprietaireId) && is_numeric($ownerIdForBookings) && (int) $bookingProprietaireId === (int) $ownerIdForBookings)
                     )) {
                         $totalBookings++;
-                        
-                        // Calculer les revenus du mois
-                        $startDate = $booking['startDate'] ?? $booking['start_date'] ?? null;
-                        if ($startDate && strpos($startDate, $currentMonth) === 0) {
-                            $monthRevenue += (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-                        }
+                        $residenceBookings[] = $booking;
                     }
                 }
+
+                // Revenu propriétaire réalisé ce mois-ci (clés remises ce mois-ci), montants de l'API.
+                $monthRevenue = BookingFinance::ownerRealized($residenceBookings, BookingFinance::monthStart());
             } catch (\Exception $e) {
                 Log::warning('Erreur lors du calcul des statistiques', ['error' => $e->getMessage()]);
             }
@@ -1024,11 +1022,11 @@ class OwnerResidenceController extends Controller
         $cancelledBookings = 0;
         $completedBookings = 0;
         
-        // Calculer les revenus et les statuts
+        // Revenu propriétaire réalisé (90 %, clés remises), montants calculés par l'API.
+        $totalRevenue = BookingFinance::ownerRealized($bookings);
+
+        // Statuts
         foreach ($bookings as $booking) {
-            $price = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-            $totalRevenue += $price;
-            
             $status = strtolower($booking['status'] ?? 'pending');
             
             // Vérifier si la date de fin est passée

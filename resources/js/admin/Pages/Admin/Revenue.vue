@@ -28,6 +28,20 @@
       />
     </div>
 
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <p class="text-sm text-slate-500">Volume des réservations confirmées</p>
+        <p class="text-xl font-semibold text-slate-900">{{ formatPrice(props.stats?.volumeRealized ?? 0) }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-slate-500">Volume confirmé ce mois</p>
+        <p class="text-xl font-semibold text-slate-900">{{ formatPrice(props.stats?.volumeRealizedThisMonth ?? 0) }}</p>
+      </div>
+      <p class="sm:col-span-2 text-xs text-slate-400">
+        Volume = 100 % du prix des réservations, commission DodoVroum = 10 %, comptés dès la confirmation du propriétaire.
+      </p>
+    </div>
+
     <div class="grid grid-cols-1 gap-6">
       <div class="bg-white/70 backdrop-blur-xl p-8 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 animate-in fade-in slide-in-from-bottom-10 duration-1000">
         <div class="flex items-center justify-between mb-8">
@@ -108,6 +122,8 @@ interface DashboardStats {
   activeProperties: number;
   trends: Record<string, number>;
   chartData: Array<{ month: string; total: number }>;
+  volumeRealized: number;
+  volumeRealizedThisMonth: number;
 }
 
 /** --- Props & State --- */

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class OwnerComboOfferController extends Controller
 {
@@ -138,9 +139,8 @@ class OwnerComboOfferController extends Controller
             $totalBookings = 0;
             $confirmedBookings = 0;
             $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
-            
+            $comboBookings = [];
+
             foreach ($offers as $offer) {
                 if (($offer['isActive'] ?? $offer['is_active'] ?? $offer['available'] ?? true) === true) {
                     $activeOffers++;
@@ -169,20 +169,18 @@ class OwnerComboOfferController extends Controller
                             (is_numeric($bookingProprietaireId) && is_numeric($proprietaireId) && (int) $bookingProprietaireId === (int) $proprietaireId)
                         )) {
                             $totalBookings++;
-                            
+                            $comboBookings[] = $booking;
+
                             $status = strtolower($booking['status'] ?? 'pending');
                             if ($status === 'confirmed' || $status === 'confirmee') {
                                 $confirmedBookings++;
                             }
-                            
-                            // Calculer les revenus du mois
-                            $startDate = $booking['startDate'] ?? $booking['start_date'] ?? null;
-                            if ($startDate && strpos($startDate, $currentMonth) === 0) {
-                                $monthRevenue += (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-                            }
                         }
                     }
                 }
+
+                // Revenu propriétaire réalisé ce mois-ci (clés remises ce mois-ci), montants de l'API.
+                $monthRevenue = BookingFinance::ownerRealized($comboBookings, BookingFinance::monthStart());
             } catch (\Exception $e) {
                 Log::warning('Erreur lors du calcul des statistiques offres combinées', ['error' => $e->getMessage()]);
             }
@@ -698,11 +696,11 @@ class OwnerComboOfferController extends Controller
             
             // Calculer les stats pour l'offre combinée
             $totalBookings = count($offerBookings);
-            $totalRevenue = 0;
+            // Revenu propriétaire réalisé (90 %, clés remises), montants de l'API.
+            $totalRevenue = BookingFinance::ownerRealized($offerBookings);
             $confirmedBookings = 0;
-            
+
             foreach ($offerBookings as $booking) {
-                $totalRevenue += (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
                 $status = strtolower($booking['status'] ?? 'pending');
                 if ($status === 'confirmed' || $status === 'confirmee') {
                     $confirmedBookings++;

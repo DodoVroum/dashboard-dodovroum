@@ -152,7 +152,7 @@
         <div class="flex items-center justify-between mb-2">
           <DollarSign class="w-5 h-5 text-slate-400" />
         </div>
-        <p class="text-sm text-slate-500 mb-1">Revenus générés</p>
+        <p class="text-sm text-slate-500 mb-1">Revenus réalisés</p>
         <p class="text-2xl font-semibold text-emerald-600">{{ formatPrice(stats?.totalRevenue || 0) }} CFA</p>
       </div>
       <div class="bg-white border border-slate-200 rounded-xl p-6">

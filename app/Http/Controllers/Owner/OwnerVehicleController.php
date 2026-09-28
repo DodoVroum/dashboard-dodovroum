@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class OwnerVehicleController extends Controller
 {
@@ -190,9 +191,7 @@ class OwnerVehicleController extends Controller
             $availableVehicles = 0;
             $totalBookings = 0;
             $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
-            
+
             foreach ($vehicles as $vehicle) {
                 if (($vehicle['available'] ?? $vehicle['isActive'] ?? true) === true) {
                     $availableVehicles++;
@@ -202,8 +201,9 @@ class OwnerVehicleController extends Controller
             // Récupérer les réservations pour calculer les stats
             try {
                 $allBookings = $this->apiService->getBookings(['proprietaireId' => $apiFilters['proprietaireId']]);
+                $vehicleBookings = [];
 
-                // Filtrer les réservations pour ce mois
+                // Réservations des véhicules du propriétaire
                 foreach ($allBookings as $booking) {
                     $bookingProprietaireId = null;
                     if (isset($booking['vehicle']) && is_array($booking['vehicle'])) {
@@ -215,14 +215,12 @@ class OwnerVehicleController extends Controller
                         (is_numeric($bookingProprietaireId) && is_numeric($apiFilters['proprietaireId']) && (int) $bookingProprietaireId === (int) $apiFilters['proprietaireId'])
                     )) {
                         $totalBookings++;
-                        
-                        // Calculer les revenus du mois
-                        $startDate = $booking['startDate'] ?? $booking['start_date'] ?? null;
-                        if ($startDate && strpos($startDate, $currentMonth) === 0) {
-                            $monthRevenue += (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-                        }
+                        $vehicleBookings[] = $booking;
                     }
                 }
+
+                // Revenu propriétaire réalisé ce mois-ci (clés remises ce mois-ci), montants de l'API.
+                $monthRevenue = BookingFinance::ownerRealized($vehicleBookings, BookingFinance::monthStart());
             } catch (\Exception $e) {
                 Log::warning('Erreur lors du calcul des statistiques véhicules', ['error' => $e->getMessage()]);
             }
@@ -838,11 +836,11 @@ class OwnerVehicleController extends Controller
         $cancelledBookings = 0;
         $completedBookings = 0;
         
-        // Calculer les revenus et les statuts
+        // Revenu propriétaire réalisé (90 %, clés remises), montants calculés par l'API.
+        $totalRevenue = BookingFinance::ownerRealized($bookings);
+
+        // Statuts
         foreach ($bookings as $booking) {
-            $price = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-            $totalRevenue += $price;
-            
             $status = strtolower($booking['status'] ?? 'pending');
             if ($status === 'confirmed' || $status === 'confirmee') {
                 $confirmedBookings++;

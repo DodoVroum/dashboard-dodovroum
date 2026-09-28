@@ -12,6 +12,7 @@ use App\Services\DodoVroumApiService;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class OwnerDashboardController extends Controller
 {
@@ -63,7 +64,7 @@ class OwnerDashboardController extends Controller
                         'residences' => ['total' => 0, 'active' => 0, 'inactive' => 0, 'withoutImage' => 0, 'last' => null],
                         'vehicles' => ['total' => 0, 'available' => 0, 'unavailable' => 0, 'withoutImage' => 0, 'withoutPrice' => 0, 'last' => null],
                         'bookings' => ['total' => 0, 'active' => 0, 'pending' => 0, 'completed' => 0, 'cancelled' => 0],
-                        'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
+                        'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'pending' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
                         'comboOffers' => 0,
                     ],
                     'recentBookings' => [],
@@ -422,7 +423,7 @@ class OwnerDashboardController extends Controller
                 'residences' => ['total' => 0, 'active' => 0, 'inactive' => 0, 'withoutImage' => 0, 'last' => null],
                 'vehicles' => ['total' => 0, 'available' => 0, 'unavailable' => 0, 'withoutImage' => 0, 'withoutPrice' => 0, 'last' => null],
                 'bookings' => ['total' => 0, 'active' => 0, 'pending' => 0, 'completed' => 0, 'cancelled' => 0],
-                'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
+                'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'pending' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
                 'comboOffers' => 0,
             ];
             $mappedBookings = [];
@@ -527,22 +528,17 @@ class OwnerDashboardController extends Controller
             }
         }
         
-        // Revenus
-        $today = new \DateTime();
-        $monthStart = new \DateTime($today->format('Y-m-01'));
-        
-        $revenueToday = 0;
-        $revenueMonth = 0;
-        $revenueTotal = 0;
+        // Revenus propriétaire (90 % du totalPrice), montants calculés par l'API :
+        // réalisés le jour de la remise des clés, en attente jusque-là
+        // (réservation payée et/ou confirmée).
+        $revenueToday = BookingFinance::ownerRealized($bookings, BookingFinance::dayStart());
+        $revenueMonth = BookingFinance::ownerRealized($bookings, BookingFinance::monthStart());
+        $revenueTotal = BookingFinance::ownerRealized($bookings);
+        $revenuePending = BookingFinance::ownerPending($bookings);
         $paidBookings = 0;
         $unpaidBookings = 0;
-        
+
         foreach ($bookings as $booking) {
-            $totalPrice = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-            // Montant à verser au propriétaire = 90% du prix total
-            $ownerPayment = round($totalPrice * 0.9);
-            $revenueTotal += $ownerPayment;
-            
             // Vérifier si payé (simplifié - à améliorer avec les données de paiement)
             $isPaid = false;
             if (isset($booking['payments']) && is_array($booking['payments'])) {
@@ -559,24 +555,6 @@ class OwnerDashboardController extends Controller
                 $paidBookings++;
             } else {
                 $unpaidBookings++;
-            }
-            
-            // Revenus du mois (montant à verser au propriétaire)
-            $bookingDate = $booking['createdAt'] ?? $booking['created_at'] ?? null;
-            if ($bookingDate) {
-                try {
-                    $bookingDateTime = new \DateTime($bookingDate);
-                    if ($bookingDateTime >= $monthStart) {
-                        $revenueMonth += $ownerPayment;
-                    }
-                    
-                    // Revenus du jour (montant à verser au propriétaire)
-                    if ($bookingDateTime->format('Y-m-d') === $today->format('Y-m-d')) {
-                        $revenueToday += $ownerPayment;
-                    }
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs de date
-                }
             }
         }
         
@@ -613,6 +591,7 @@ class OwnerDashboardController extends Controller
                 'today' => $revenueToday,
                 'month' => $revenueMonth,
                 'total' => $revenueTotal,
+                'pending' => $revenuePending,
                 'paidBookings' => $paidBookings,
                 'unpaidBookings' => $unpaidBookings,
             ],
@@ -688,20 +667,6 @@ class OwnerDashboardController extends Controller
         }
         
         return $alerts;
-    }
-
-    /**
-     * Calculer le revenu total à partir des réservations (méthode legacy, conservée pour compatibilité)
-     */
-    private function calculateRevenue(array $bookings): string
-    {
-        $total = 0;
-        foreach ($bookings as $booking) {
-            $price = $booking['totalPrice'] ?? $booking['total_price'] ?? 0;
-            $total += (float) $price;
-        }
-        
-        return number_format($total, 0, ',', ' ');
     }
 
     private function isOwnerConfirmedAtSet(mixed $ownerConfirmedAt): bool

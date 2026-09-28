@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Owner;
 
-use App\Http\Controllers\Concerns\EvaluatesBookingRevenueEligibility;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Owner\Concerns\HasProprietaireId;
 use App\Services\BookingOwnerScopeService;
-use App\Services\DodoVroumApi\StatsService;
 use App\Services\DodoVroumApiService;
+use App\Support\BookingFinance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -15,12 +14,10 @@ use Inertia\Response;
 
 class OwnerRevenueController extends Controller
 {
-    use EvaluatesBookingRevenueEligibility;
     use HasProprietaireId;
 
     public function __construct(
         protected DodoVroumApiService $apiService,
-        protected StatsService $statsService,
         protected BookingOwnerScopeService $bookingOwnerScopeService
     ) {
     }
@@ -46,41 +43,9 @@ class OwnerRevenueController extends Controller
                 ]);
             }
             
-            // Essayer d'abord l'endpoint API dédié (NestJS). Tant que l'API n'est pas
-            // garantie isolée par propriétaire, on n'accepte la réponse que si elle
-            // contient explicitement l'ownerId du connecté (sinon fallback local).
-            $apiStats = $this->statsService->getOwnerStats($proprietaireId);
-
-            $hasApiPayload = $apiStats !== null
-                && (isset($apiStats['totalRevenue']) || isset($apiStats['chartData']));
-            $apiOwnerMatches = $hasApiPayload
-                && $this->apiOwnerStatsExplicitlyMatchConnectedOwner($apiStats, $proprietaireId);
-
-            if ($hasApiPayload && $apiOwnerMatches) {
-                Log::info('Utilisation des stats depuis l\'API NestJS (ownerId explicite conforme)', [
-                    'ownerId' => $proprietaireId,
-                ]);
-
-                $stats = $this->adaptApiStatsToFrontend($apiStats);
-
-                return Inertia::render('Owner/Revenue', [
-                    'stats' => $stats,
-                ]);
-            }
-
-            if ($hasApiPayload && ! $apiOwnerMatches) {
-                Log::warning('Stats API NestJS ignorées : ownerId absent ou non conforme au propriétaire connecté, calcul local.', [
-                    'expectedOwnerId' => $proprietaireId,
-                    'responseKeys' => array_keys($apiStats),
-                ]);
-            }
-
-            Log::info('Endpoint API stats indisponible ou non fiable, utilisation du calcul local', [
-                'ownerId' => $proprietaireId,
-            ]);
-            
-            // Fallback : Calculer les stats localement depuis les données de l'API
-            // (moins performant mais fonctionne même si l'endpoint NestJS n'est pas encore implémenté)
+            // Réservations du propriétaire : les montants (revenu propriétaire réalisé / en
+            // attente) sont ceux calculés par l'API (booking.finance) ; ce contrôleur ne
+            // fait que les regrouper par mois de remise des clés pour le graphique.
             $apiFilters = [];
             if (is_numeric($proprietaireId)) {
                 $apiFilters['proprietaireId'] = (int) $proprietaireId;
@@ -181,32 +146,31 @@ class OwnerRevenueController extends Controller
         $eligibleCount = 0;
 
         foreach ($bookings as $booking) {
-            if (! is_array($booking) || ! $this->isEligibleForRevenue($booking)) {
+            // Revenu réalisé uniquement : clés remises.
+            if (! is_array($booking) || ! BookingFinance::isOwnerRealized($booking)) {
                 continue;
             }
 
             $eligibleCount++;
 
-            $totalPrice = max(0.0, (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0));
-            $ownerPayment = $totalPrice * 0.9;
+            // Revenu propriétaire (90 % du totalPrice), calculé par l'API.
+            $ownerPayment = BookingFinance::ownerRevenue($booking);
             $totalRevenue += $ownerPayment;
 
-            $createdRaw = $booking['createdAt'] ?? $booking['created_at'] ?? null;
-            if ($createdRaw) {
-                try {
-                    $createdAt = Carbon::parse($createdRaw);
-                    $monthKey = $createdAt->format('Y-m');
-                    if (array_key_exists($monthKey, $chartBuckets)) {
-                        $chartBuckets[$monthKey] += $ownerPayment;
-                    }
-                    if ($createdAt->month === $currentMonth && $createdAt->year === $currentYear) {
-                        $revenueThisMonth += $ownerPayment;
-                        $bookingsThisMonth++;
-                    } elseif ($createdAt->format('Y-m') === $lastMonth->format('Y-m')) {
-                        $revenueLastMonth += $ownerPayment;
-                        $bookingsLastMonth++;
-                    }
-                } catch (\Throwable) {
+            // Comptabilisé au mois de la remise des clés.
+            $realizedAt = BookingFinance::ownerRealizedAt($booking);
+            if ($realizedAt) {
+                $realizedAt = Carbon::instance($realizedAt)->utc();
+                $monthKey = $realizedAt->format('Y-m');
+                if (array_key_exists($monthKey, $chartBuckets)) {
+                    $chartBuckets[$monthKey] += $ownerPayment;
+                }
+                if ($realizedAt->month === $currentMonth && $realizedAt->year === $currentYear) {
+                    $revenueThisMonth += $ownerPayment;
+                    $bookingsThisMonth++;
+                } elseif ($monthKey === $lastMonth->format('Y-m')) {
+                    $revenueLastMonth += $ownerPayment;
+                    $bookingsLastMonth++;
                 }
             }
 
@@ -262,123 +226,9 @@ class OwnerRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => $chartDataArray,
+            // Payée et/ou confirmée, en attente de la remise des clés.
+            'pendingRevenue' => BookingFinance::ownerPending($bookings),
         ];
-    }
-
-    /**
-     * La réponse NestJS doit inclure explicitement l'identifiant du propriétaire
-     * (ownerId / proprietaireId ou équivalent dans meta) et il doit correspondre
-     * au propriétaire connecté. Sinon on refuse la réponse (fuite cross-owner possible).
-     */
-    private function apiOwnerStatsExplicitlyMatchConnectedOwner(array $apiStats, string|int $proprietaireId): bool
-    {
-        $candidates = [
-            $apiStats['ownerId'] ?? null,
-            $apiStats['owner_id'] ?? null,
-            $apiStats['proprietaireId'] ?? null,
-            $apiStats['proprietaire_id'] ?? null,
-        ];
-
-        if (isset($apiStats['meta']) && is_array($apiStats['meta'])) {
-            $meta = $apiStats['meta'];
-            $candidates[] = $meta['ownerId'] ?? null;
-            $candidates[] = $meta['owner_id'] ?? null;
-            $candidates[] = $meta['proprietaireId'] ?? null;
-            $candidates[] = $meta['proprietaire_id'] ?? null;
-        }
-
-        $explicit = null;
-        foreach ($candidates as $value) {
-            if ($value !== null && $value !== '') {
-                $explicit = $value;
-                break;
-            }
-        }
-
-        if ($explicit === null) {
-            return false;
-        }
-
-        if ((string) $explicit === (string) $proprietaireId) {
-            return true;
-        }
-
-        return is_numeric($explicit) && is_numeric($proprietaireId)
-            && (int) $explicit === (int) $proprietaireId;
-    }
-
-    /**
-     * Adapter les stats de l'API NestJS au format attendu par le frontend
-     */
-    private function adaptApiStatsToFrontend(array $apiStats): array
-    {
-        // L'API NestJS doit retourner :
-        // {
-        //   totalRevenue: number,
-        //   revenueTrend: number,
-        //   totalBookings: number,
-        //   bookingsTrend: number,
-        //   occupationRate: number,
-        //   occupationTrend: number,
-        //   activeProperties: number,
-        //   propertiesTrend: number,
-        //   chartData: Array<{ month: string, total: number }>
-        // }
-        
-        return [
-            'totalRevenue' => (int) ($apiStats['totalRevenue'] ?? 0),
-            'revenueThisMonth' => (float) ($apiStats['revenueThisMonth'] ?? 0),
-            'totalBookings' => (int) ($apiStats['totalBookings'] ?? 0),
-            'occupationRate' => (int) ($apiStats['occupationRate'] ?? 0),
-            'activeProperties' => (int) ($apiStats['activeProperties'] ?? $apiStats['activeAssets'] ?? 0),
-            'trends' => [
-                'totalRevenue' => (float) ($apiStats['revenueTrend'] ?? 0),
-                'bookings' => (float) ($apiStats['bookingsTrend'] ?? 0),
-                'occupation' => (float) ($apiStats['occupationTrend'] ?? 0),
-                'properties' => (float) ($apiStats['propertiesTrend'] ?? 0),
-            ],
-            'chartData' => $this->normalizeChartData($apiStats['chartData'] ?? []),
-        ];
-    }
-
-    /**
-     * Normaliser les données du graphique
-     */
-    private function normalizeChartData(array $chartData): array
-    {
-        // S'assurer que tous les mois ont une valeur (même 0)
-        $normalized = [];
-        $now = new \DateTime();
-        $months = [];
-        
-        for ($i = 5; $i >= 0; $i--) {
-            $monthDate = (clone $now)->modify("-$i months");
-            $monthKey = $monthDate->format('M');
-            $months[] = $monthKey;
-            
-            // Chercher dans les données de l'API
-            $found = false;
-            foreach ($chartData as $data) {
-                $dataMonth = $data['month'] ?? $data['monthName'] ?? null;
-                if ($dataMonth === $monthKey || $dataMonth === $monthDate->format('F')) {
-                    $normalized[] = [
-                        'month' => $monthKey,
-                        'total' => (int) ($data['total'] ?? $data['revenue'] ?? 0),
-                    ];
-                    $found = true;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                $normalized[] = [
-                    'month' => $monthKey,
-                    'total' => 0,
-                ];
-            }
-        }
-        
-        return $normalized;
     }
 
     /**
@@ -399,6 +249,7 @@ class OwnerRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => [],
+            'pendingRevenue' => 0,
         ];
     }
 }

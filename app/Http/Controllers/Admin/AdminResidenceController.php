@@ -17,6 +17,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class AdminResidenceController extends Controller
 {
@@ -142,8 +143,8 @@ class AdminResidenceController extends Controller
             $availableResidences = 0;
             $activeBookings = 0; // Réservations en cours
             $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
+            $monthCommission = 0;
+
             $today = new \DateTimeImmutable('today');
             
             $archivedCount = 0;
@@ -159,10 +160,12 @@ class AdminResidenceController extends Controller
             // Récupérer les réservations pour calculer les stats
             try {
                 $allBookings = $this->apiService->getBookings([]);
-                
+                $residenceBookings = [];
+
                 foreach ($allBookings as $booking) {
                     // Vérifier si la réservation concerne une résidence
                     if (isset($booking['residence']) || isset($booking['residenceId']) || isset($booking['residence_id'])) {
+                        $residenceBookings[] = $booking;
                         // Vérifier si c'est une réservation en cours
                         // Une réservation est "en cours" si :
                         // 1. Le client a validé qu'il a reçu la clé (keyRetrievedAt existe)
@@ -180,14 +183,13 @@ class AdminResidenceController extends Controller
                                 // Ignorer les erreurs de parsing de dates
                             }
                         }
-                        
-                        // Calculer les revenus du mois
-                        $startDate = $booking['startDate'] ?? $booking['start_date'] ?? null;
-                        if ($startDate && strpos($startDate, $currentMonth) === 0) {
-                            $monthRevenue += (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-                        }
                     }
                 }
+
+                // Volume et commission réalisés ce mois-ci (réservations confirmées ce mois-ci), montants de l'API.
+                $realizedMonth = BookingFinance::platformRealized($residenceBookings, BookingFinance::monthStart());
+                $monthRevenue = $realizedMonth['bookingValue'];
+                $monthCommission = $realizedMonth['commission'];
             } catch (\Exception $e) {
                 Log::warning('Erreur lors du calcul des statistiques résidences', ['error' => $e->getMessage()]);
             }
@@ -257,6 +259,7 @@ class AdminResidenceController extends Controller
                 'availableResidences' => $availableResidences ?? 0,
                 'activeBookings' => $activeBookings ?? 0,
                 'monthRevenue' => $monthRevenue ?? 0,
+                'monthCommission' => $monthCommission ?? 0,
             ],
         ]);
     }
@@ -526,11 +529,13 @@ class AdminResidenceController extends Controller
         $cancelledBookings = 0;
         $completedBookings = 0;
         
-        // Calculer les revenus et les statuts
+        // Volume (100 %) et commission DodoVroum (10 %) des réservations confirmées, montants de l'API.
+        $realized = BookingFinance::platformRealized($bookings);
+        $totalRevenue = $realized['bookingValue'];
+        $totalCommission = $realized['commission'];
+
+        // Statuts
         foreach ($bookings as $booking) {
-            $price = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-            $totalRevenue += $price;
-            
             $status = strtolower($booking['status'] ?? 'pending');
             
             // Vérifier si la date de fin est passée
@@ -611,6 +616,7 @@ class AdminResidenceController extends Controller
         return [
             'totalBookings' => $totalBookings,
             'totalRevenue' => $totalRevenue,
+            'totalCommission' => $totalCommission,
             'averageRating' => $averageRating,
             'totalReviews' => $totalReviews,
             'occupationRate' => $occupationRate,

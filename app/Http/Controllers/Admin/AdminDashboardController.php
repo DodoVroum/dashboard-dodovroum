@@ -7,6 +7,7 @@ use App\Services\DodoVroumApiService;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class AdminDashboardController extends Controller
 {
@@ -257,7 +258,7 @@ class AdminDashboardController extends Controller
                 'residences' => ['total' => 0, 'active' => 0, 'inactive' => 0, 'withoutImage' => 0, 'last' => null],
                 'vehicles' => ['total' => 0, 'available' => 0, 'unavailable' => 0, 'withoutImage' => 0, 'withoutPrice' => 0, 'last' => null],
                 'bookings' => ['total' => 0, 'active' => 0, 'pending' => 0, 'completed' => 0, 'cancelled' => 0],
-                'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
+                'revenue' => ['today' => 0, 'month' => 0, 'total' => 0, 'volumeToday' => 0, 'volumeMonth' => 0, 'volumeTotal' => 0, 'paidBookings' => 0, 'unpaidBookings' => 0],
                 'comboOffers' => 0,
             ];
             $mappedBookings = [];
@@ -364,102 +365,19 @@ class AdminDashboardController extends Controller
             }
         }
         
-        // Revenus
-        // Filtrer les réservations valides (confirmées ou terminées, exclure annulées et en attente)
-        // Même logique que AdminBookingController : vérifier si le séjour est terminé via endDate
-        $validBookings = array_filter($bookings, function($booking) {
-            $status = strtolower($booking['status'] ?? 'pending');
-            
-            // Exclure les réservations annulées
-            if (in_array($status, ['cancelled', 'canceled', 'annulée', 'annulee', 'annule'])) {
-                return false;
-            }
-            
-            // Vérifier si le séjour est terminé (date de fin passée)
-            $endDate = $booking['endDate'] ?? $booking['end_date'] ?? $booking['checkOutDate'] ?? null;
-            $isStayCompleted = false;
-            if ($endDate) {
-                try {
-                    $today = new \DateTime('today');
-                    $end = new \DateTime($endDate);
-                    $isStayCompleted = $today > $end;
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs de date
-                }
-            }
-            
-            // PRIORITÉ 1: Si la date de fin est passée, la réservation est terminée (valide)
-            if ($isStayCompleted) {
-                return true;
-            }
-            
-            // Vérifier si le propriétaire a confirmé la réservation
-            $ownerConfirmedAt = $booking['ownerConfirmedAt'] ?? $booking['owner_confirmed_at'] ?? null;
-            
-            // PRIORITÉ 2: Si le propriétaire a confirmé (ownerConfirmedAt existe)
-            if (!empty($ownerConfirmedAt)) {
-                return true; // Confirmée par le propriétaire
-            }
-            
-            // PRIORITÉ 3: Le statut est "completed" ou "terminée" (séjour terminé selon l'API)
-            if (in_array($status, ['completed', 'terminee', 'terminée'])) {
-                return true; // Séjour terminé
-            }
-            
-            // PRIORITÉ 4: Le statut est "confirmed" ou "confirmee" (même sans ownerConfirmedAt, au cas où)
-            if (in_array($status, ['confirmed', 'confirmee', 'confirmée'])) {
-                return true; // Statut confirmé
-            }
-            
-            // Exclure les réservations en attente (pending)
-            return false;
-        });
-        
-        $today = new \DateTime();
-        $monthStart = new \DateTime($today->format('Y-m-01'));
-        
-        $revenueToday = 0;
-        $revenueMonth = 0;
-        $revenueTotal = 0;
+        // Revenus DodoVroum, montants calculés par l'API : comptabilisés dès la
+        // confirmation du propriétaire. Volume = 100 %, commission = 10 % du totalPrice.
+        $validBookings = array_filter($bookings, fn ($booking) => is_array($booking) && BookingFinance::isPlatformRealized($booking));
+        $realizedToday = BookingFinance::platformRealized($bookings, BookingFinance::dayStart());
+        $realizedMonth = BookingFinance::platformRealized($bookings, BookingFinance::monthStart());
+        $realizedTotal = BookingFinance::platformRealized($bookings);
+        $revenueToday = $realizedToday['commission'];
+        $revenueMonth = $realizedMonth['commission'];
+        $revenueTotal = $realizedTotal['commission'];
         $paidBookings = 0;
         $unpaidBookings = 0;
-        
-        Log::info('AdminDashboardController - Toutes les réservations avant filtrage', [
-            'total_bookings' => count($bookings),
-            'all_bookings_details' => array_map(function($b) {
-                return [
-                    'id' => $b['id'] ?? $b['_id'] ?? 'N/A',
-                    'status' => $b['status'] ?? 'N/A',
-                    'totalPrice' => $b['totalPrice'] ?? $b['total_price'] ?? 0,
-                    'endDate' => $b['endDate'] ?? $b['end_date'] ?? $b['checkOutDate'] ?? null,
-                    'startDate' => $b['startDate'] ?? $b['start_date'] ?? $b['checkInDate'] ?? null,
-                    'ownerConfirmedAt' => $b['ownerConfirmedAt'] ?? $b['owner_confirmed_at'] ?? null,
-                    'createdAt' => $b['createdAt'] ?? $b['created_at'] ?? null,
-                ];
-            }, array_slice($bookings, 0, 10)),
-        ]);
-        
-        Log::info('AdminDashboardController - Réservations valides pour calcul revenus', [
-            'total_valid_bookings' => count($validBookings),
-            'valid_bookings_details' => array_map(function($b) {
-                return [
-                    'id' => $b['id'] ?? $b['_id'] ?? 'N/A',
-                    'status' => $b['status'] ?? 'N/A',
-                    'totalPrice' => $b['totalPrice'] ?? $b['total_price'] ?? 0,
-                    'endDate' => $b['endDate'] ?? $b['end_date'] ?? $b['checkOutDate'] ?? null,
-                    'startDate' => $b['startDate'] ?? $b['start_date'] ?? $b['checkInDate'] ?? null,
-                    'ownerConfirmedAt' => $b['ownerConfirmedAt'] ?? $b['owner_confirmed_at'] ?? null,
-                    'createdAt' => $b['createdAt'] ?? $b['created_at'] ?? null,
-                ];
-            }, array_slice($validBookings, 0, 10)),
-        ]);
-        
+
         foreach ($validBookings as $booking) {
-            $totalPrice = (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0);
-            // Commission DodoVroum = 10% du prix total
-            $commission = round($totalPrice * 0.1);
-            $revenueTotal += $commission;
-            
             // Vérifier si payé (simplifié - à améliorer avec les données de paiement)
             $isPaid = false;
             if (isset($booking['payments']) && is_array($booking['payments'])) {
@@ -471,32 +389,14 @@ class AdminDashboardController extends Controller
                     }
                 }
             }
-            
+
             if ($isPaid) {
                 $paidBookings++;
             } else {
                 $unpaidBookings++;
             }
-            
-            // Revenus du mois (commission DodoVroum)
-            $bookingDate = $booking['createdAt'] ?? $booking['created_at'] ?? null;
-            if ($bookingDate) {
-                try {
-                    $bookingDateTime = new \DateTime($bookingDate);
-                    if ($bookingDateTime >= $monthStart) {
-                        $revenueMonth += $commission;
-                    }
-                    
-                    // Revenus du jour (commission DodoVroum)
-                    if ($bookingDateTime->format('Y-m-d') === $today->format('Y-m-d')) {
-                        $revenueToday += $commission;
-                    }
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs de date
-                }
-            }
         }
-        
+
         $stats = [
             'residences' => [
                 'total' => count($residences),
@@ -530,6 +430,10 @@ class AdminDashboardController extends Controller
                 'today' => $revenueToday,
                 'month' => $revenueMonth,
                 'total' => $revenueTotal,
+                // Volume des réservations réalisées (100 % du totalPrice)
+                'volumeToday' => $realizedToday['bookingValue'],
+                'volumeMonth' => $realizedMonth['bookingValue'],
+                'volumeTotal' => $realizedTotal['bookingValue'],
                 'paidBookings' => $paidBookings,
                 'unpaidBookings' => $unpaidBookings,
             ],

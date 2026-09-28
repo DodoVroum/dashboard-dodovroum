@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\BookingFinance;
 
 class AdminBookingController extends Controller
 {
@@ -397,6 +398,8 @@ class AdminBookingController extends Controller
                     'totalPaid' => $totalPaid,
                     'remainingBalance' => $remainingBalance,
                     'paymentStatus' => $paymentStatusApi,
+                    // Commission / part propriétaire calculées par l'API
+                    'finance' => $booking['finance'] ?? null,
                     'isFullyPaid' => $isFullyPaid,
                     'isCheckInDay' => $isCheckInDay,
                     'isCheckInDatePassed' => $isCheckInDatePassed,
@@ -666,38 +669,7 @@ class AdminBookingController extends Controller
             $confirmedBookings = 0;
             $pendingBookings = 0;
             $cancelledBookings = 0;
-            $totalRevenue = 0;
-            $monthRevenue = 0;
-            
-            $currentMonth = date('Y-m');
-            
-            // Filtrer les réservations valides pour le calcul des revenus (confirmées ou terminées, exclure annulées et en attente)
-            // Même logique que AdminRevenueController et AdminDashboardController
-            $validBookingsForRevenue = array_filter($allMappedBookingsForStats, function($booking) {
-                // PRIORITÉ 1 : Vérifier le statut brut (rawStatus) pour exclure les annulées
-                $rawStatus = strtolower($booking['rawStatus'] ?? $booking['status'] ?? 'pending');
-                if (in_array($rawStatus, ['cancelled', 'canceled', 'annulée', 'annulee', 'annule'])) {
-                    return false; // Exclure les réservations annulées
-                }
-                
-                // PRIORITÉ 2 : Vérifier le statut final
-                $status = strtolower($booking['status'] ?? 'pending');
-                
-                // Inclure si :
-                // 1. Le statut est "completed" ou "terminée" (séjour terminé)
-                // 2. Le statut est "confirmed" ou "confirmee" (confirmée)
-                if (in_array($status, ['completed', 'terminee', 'terminée'])) {
-                    return true; // Séjour terminé
-                }
-                
-                if (in_array($status, ['confirmed', 'confirmee', 'confirmée'])) {
-                    return true; // Statut confirmé
-                }
-                
-                // Exclure les réservations en attente (pending)
-                return false;
-            });
-            
+
             foreach ($allMappedBookingsForStats as $booking) {
                 $status = strtolower($booking['status'] ?? 'pending');
                 if ($status === 'confirmed' || $status === 'confirmee') {
@@ -709,44 +681,13 @@ class AdminBookingController extends Controller
                 }
             }
             
-            // Calculer les revenus uniquement sur les réservations valides (commission DodoVroum = 10% du prix total)
-            // Utiliser createdAt (date de création) pour cohérence avec AdminRevenueController et AdminDashboardController
-            $now = new \DateTime();
-            $currentMonthKey = $now->format('Y-m');
-            
-            Log::info('AdminBookingController - Réservations valides pour calcul revenus', [
-                'total_valid_bookings' => count($validBookingsForRevenue),
-                'valid_bookings_details' => array_map(function($b) {
-                    return [
-                        'status' => $b['status'] ?? 'N/A',
-                        'totalPrice' => $b['totalPrice'] ?? 0,
-                        'startDate' => $b['startDate'] ?? 'N/A',
-                        'createdAt' => $b['createdAt'] ?? 'N/A',
-                    ];
-                }, array_slice($validBookingsForRevenue, 0, 10)),
-            ]);
-            
-            foreach ($validBookingsForRevenue as $booking) {
-                $price = (float) ($booking['totalPrice'] ?? 0);
-                // Commission DodoVroum = 10% du prix total
-                $commission = round($price * 0.1);
-                $totalRevenue += $commission;
-                
-                // Revenus du mois : basé sur la date de création de la réservation (createdAt)
-                // Pour cohérence avec AdminRevenueController et AdminDashboardController
-                $bookingDate = $booking['createdAt'] ?? null;
-                if ($bookingDate) {
-                    try {
-                        $bookingDateTime = new \DateTime($bookingDate);
-                        if ($bookingDateTime->format('Y-m') === $currentMonthKey) {
-                            $monthRevenue += $commission;
-                        }
-                    } catch (\Exception $e) {
-                        // Ignorer les erreurs de date
-                    }
-                }
-            }
-            
+            // Commission DodoVroum (10 %) et volume (100 % du totalPrice) réalisés à la
+            // confirmation du propriétaire, montants calculés par l'API ; mois = ownerConfirmedAt.
+            $realizedTotal = BookingFinance::platformRealized($allValidBookingsForStats);
+            $realizedMonth = BookingFinance::platformRealized($allValidBookingsForStats, BookingFinance::monthStart());
+            $totalRevenue = $realizedTotal['commission'];
+            $monthRevenue = $realizedMonth['commission'];
+
             Log::debug('Réservations paginées dans AdminBookingController', [
                 'total' => $paginated->total(),
                 'current_page' => $paginated->currentPage(),
@@ -783,6 +724,8 @@ class AdminBookingController extends Controller
                     'cancelledBookings' => $cancelledBookings,
                     'totalRevenue' => $totalRevenue,
                     'monthRevenue' => $monthRevenue,
+                    'totalVolume' => $realizedTotal['bookingValue'],
+                    'monthVolume' => $realizedMonth['bookingValue'],
                 ],
             ]);
         } catch (DodoVroumApiException $e) {
@@ -1321,6 +1264,8 @@ class AdminBookingController extends Controller
                 'totalPaid' => $totalPaid,
                 'remainingBalance' => $remainingBalance,
                 'paymentStatus' => $paymentStatusApi,
+                // Commission / part propriétaire calculées par l'API
+                'finance' => $booking['finance'] ?? null,
                 'isFullyPaid' => $isFullyPaid,
                 'paymentType' => $paymentType,
                 'payments' => $payments,

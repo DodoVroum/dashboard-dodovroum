@@ -10,9 +10,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * Page Réservations propriétaire : « Revenus du mois » et « Revenus totaux »
- * affichent l'argent réellement encaissé (GET /api/stats), jamais la somme des
- * totalPrice des réservations.
+ * Page Réservations propriétaire : revenus propriétaire (90 % du totalPrice)
+ * fournis par l'API (GET /api/stats → finance) — réalisés le jour de la remise
+ * des clés, en attente sinon — jamais recalculés depuis les réservations.
  */
 class OwnerBookingRevenueTest extends TestCase
 {
@@ -44,7 +44,18 @@ class OwnerBookingRevenueTest extends TestCase
 
     public static function statsPayloads(): array
     {
-        $stats = ['totalBookings' => 2, 'totalRevenue' => 15000, 'monthRevenue' => 15000];
+        $stats = [
+            'totalBookings' => 2,
+            'totalRevenue' => 30000, // encaissé en ligne : ne doit pas être affiché comme revenu
+            'monthRevenue' => 30000,
+            'finance' => [
+                'owner' => ['realized' => 90000, 'realizedMonth' => 90000, 'pending' => 45000],
+                'platform' => [
+                    'realized' => ['bookingValue' => 150000, 'commission' => 15000],
+                    'realizedMonth' => ['bookingValue' => 150000, 'commission' => 15000],
+                ],
+            ],
+        ];
 
         return [
             'objet nu (réponse actuelle de GET /api/stats)' => [$stats],
@@ -53,7 +64,7 @@ class OwnerBookingRevenueTest extends TestCase
     }
 
     /** @dataProvider statsPayloads */
-    public function test_les_revenus_viennent_des_paiements_encaisses_et_non_du_total_price(array $statsPayload): void
+    public function test_revenus_realises_et_en_attente_viennent_de_l_api(array $statsPayload): void
     {
         Http::fake([
             '*/bookings/my-properties-bookings*' => Http::response($this->bookings()),
@@ -66,8 +77,9 @@ class OwnerBookingRevenueTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Owner/Bookings/Index')
                 ->where('stats.totalBookings', 2)
-                ->where('stats.totalRevenue', 15000)   // et non 100 000 (somme des totalPrice)
-                ->where('stats.monthRevenue', 15000));
+                ->where('stats.totalRevenue', 90000)   // 90 % des réservations dont les clés sont remises
+                ->where('stats.monthRevenue', 90000)
+                ->where('stats.pendingRevenue', 45000)); // payées ou confirmées, clés pas encore remises
 
         // Périmètre : jeton du propriétaire connecté, aucun identifiant dans l'URL.
         Http::assertSent(fn (Request $request) => str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/stats')
@@ -86,6 +98,7 @@ class OwnerBookingRevenueTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('stats.totalRevenue', 0)
-                ->where('stats.monthRevenue', 0));
+                ->where('stats.monthRevenue', 0)
+                ->where('stats.pendingRevenue', 0));
     }
 }

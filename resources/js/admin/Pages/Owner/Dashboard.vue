@@ -22,7 +22,7 @@
           <Clock class="w-5 h-5" />
         </template>
       </StatsCard>
-      <StatsCard title="Revenus du mois" :value="formatRevenue(stats.revenue.month)">
+      <StatsCard title="Revenus réalisés du mois" :value="formatRevenue(stats.revenue.month)">
         <template #icon>
           <DollarSign class="w-5 h-5" />
         </template>
@@ -225,16 +225,21 @@
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <p class="text-sm text-slate-500 mb-1">Revenus du jour</p>
+          <p class="text-sm text-slate-500 mb-1">Revenus réalisés du jour</p>
           <p class="text-2xl font-semibold text-slate-900">{{ formatPrice(stats.revenue.today) }} CFA</p>
         </div>
         <div>
-          <p class="text-sm text-slate-500 mb-1">Revenus du mois</p>
+          <p class="text-sm text-slate-500 mb-1">Revenus réalisés du mois</p>
           <p class="text-2xl font-semibold text-emerald-600">{{ formatPrice(stats.revenue.month) }} CFA</p>
         </div>
         <div>
-          <p class="text-sm text-slate-500 mb-1">Revenus cumulés</p>
+          <p class="text-sm text-slate-500 mb-1">Revenus réalisés cumulés</p>
           <p class="text-2xl font-semibold text-blue-600">{{ formatPrice(stats.revenue.total) }} CFA</p>
+        </div>
+        <div>
+          <p class="text-sm text-slate-500 mb-1">Revenus en attente</p>
+          <p class="text-2xl font-semibold text-amber-600">{{ formatPrice(stats.revenue.pending ?? 0) }} CFA</p>
+          <p class="text-xs text-slate-400 mt-1">Réservations payées ou confirmées, en attente de la remise des clés</p>
         </div>
         <div>
           <p class="text-sm text-slate-500 mb-1">Réservations payées</p>
@@ -356,6 +361,7 @@ const props = defineProps<{
       today: number;
       month: number;
       total: number;
+      pending?: number;
       paidBookings: number;
       unpaidBookings: number;
     };

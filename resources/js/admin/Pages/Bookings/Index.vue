@@ -38,18 +38,20 @@
         <div class="flex items-center justify-between mb-2">
           <DollarSign class="w-5 h-5 text-blue-500" />
         </div>
-        <p class="text-sm text-slate-500 mb-1">Revenus du mois</p>
+        <p class="text-sm text-slate-500 mb-1">Commission DodoVroum du mois</p>
         <p class="text-xl font-semibold text-blue-600 leading-tight break-words"
            :title="`${formatPrice(stats?.monthRevenue || 0)} CFA`">
           {{ formatRevenue(stats?.monthRevenue || 0) }}
         </p>
+        <p class="text-xs text-slate-400 mt-1">Volume : {{ formatPrice(stats?.monthVolume || 0) }} CFA</p>
       </div>
       <div class="bg-white border border-slate-200 rounded-xl p-6">
         <div class="flex items-center justify-between mb-2">
           <TrendingUp class="w-5 h-5 text-amber-500" />
         </div>
-        <p class="text-sm text-slate-500 mb-1">Revenus totaux</p>
+        <p class="text-sm text-slate-500 mb-1">Commission DodoVroum totale</p>
         <p class="text-2xl font-semibold text-amber-600">{{ formatPrice(stats?.totalRevenue || 0) }} CFA</p>
+        <p class="text-xs text-slate-400 mt-1">Volume : {{ formatPrice(stats?.totalVolume || 0) }} CFA · réservations confirmées</p>
       </div>
     </div>
 
@@ -220,7 +222,7 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm">
                 <div class="font-semibold text-white px-3 py-1.5 rounded-lg inline-block" style="background: rgb(26, 51, 101);">
-                  {{ formatPrice(getOwnerPaymentAmount(booking.totalPrice)) }} CFA
+                  {{ formatPrice(booking.finance?.ownerRevenue ?? 0) }} CFA
                 </div>
                 <div class="text-xs text-slate-500 mt-2">
                   (90% du total)
@@ -230,7 +232,7 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm">
                 <div class="font-semibold text-white px-3 py-1.5 rounded-lg inline-block bg-emerald-600">
-                  {{ formatPrice(getDodoVroumCommission(booking.totalPrice)) }} CFA
+                  {{ formatPrice(booking.finance?.commission ?? 0) }} CFA
                 </div>
                 <div class="text-xs text-slate-500 mt-2">
                   (10% du total)
@@ -370,6 +372,8 @@ const props = defineProps<{
     paymentStatus?: string | null;
     isFullyPaid?: boolean;
     paymentType?: 'NONE' | 'DOWN_PAYMENT' | 'FULL_PAYMENT';
+    /** Montants calculés par l'API (10 % / 90 % du totalPrice). */
+    finance?: { ownerRevenue: number; commission: number } | null;
     status: string;
     isPendingApproval?: boolean;
     createdAt: string | null;
@@ -401,6 +405,8 @@ const props = defineProps<{
     cancelledBookings: number;
     totalRevenue: number;
     monthRevenue: number;
+    totalVolume?: number;
+    monthVolume?: number;
   };
 }>();
 
@@ -543,16 +549,6 @@ const formatRevenue = (amount: number): string => {
   if (n >= 1_000_000)     return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(n / 1_000_000)} M CFA`;
   if (n >= 10_000)        return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(n / 1_000)} k CFA`;
   return `${new Intl.NumberFormat('fr-FR').format(n)} CFA`;
-};
-
-const getOwnerPaymentAmount = (totalPrice: number | null | undefined): number => {
-  if (!totalPrice || totalPrice === 0) return 0;
-  return Math.round(totalPrice * 0.9);
-};
-
-const getDodoVroumCommission = (totalPrice: number | null | undefined): number => {
-  if (!totalPrice || totalPrice === 0) return 0;
-  return Math.round(totalPrice * 0.1);
 };
 
 const formatNumber = (num: number): string => {

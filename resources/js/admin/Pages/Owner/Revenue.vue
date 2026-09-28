@@ -17,7 +17,7 @@
     <!-- Bento Grid Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard
-        title="Revenu Total"
+        title="Revenus réalisés"
         :value="formatPrice(stats.totalRevenue)"
         :trend="stats.trends.totalRevenue"
         :icon="Wallet"
@@ -46,9 +46,17 @@
       />
     </div>
 
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm text-slate-500">Revenus en attente</p>
+        <p class="text-xs text-slate-400">Réservations payées ou confirmées, en attente de la remise des clés</p>
+      </div>
+      <p class="text-2xl font-semibold text-amber-600">{{ formatPrice(stats.pendingRevenue ?? 0) }} FCFA</p>
+    </div>
+
     <!-- Graphique de Croissance -->
     <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-      <h3 class="font-bold text-lg mb-6 text-slate-900">Évolution du CA</h3>
+      <h3 class="font-bold text-lg mb-6 text-slate-900">Évolution des revenus réalisés</h3>
       <div v-if="loading" class="h-[350px] flex items-center justify-center">
         <div class="text-slate-400">Chargement des données...</div>
       </div>
@@ -91,6 +99,7 @@ const props = defineProps<{
       properties: number;
     };
     chartData?: Array<{ month: string; total: number }>;
+    pendingRevenue?: number;
   };
 }>();
 
@@ -125,6 +134,7 @@ const stats = computed(() => {
       properties: 0,
     },
     chartData: [],
+    pendingRevenue: 0,
   };
 });
 

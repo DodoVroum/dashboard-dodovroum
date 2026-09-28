@@ -22,7 +22,7 @@
           <Clock class="w-5 h-5" />
         </template>
       </StatsCard>
-      <StatsCard title="Revenus du mois" :value="formatRevenue(stats.revenue.month)">
+      <StatsCard title="Commission DodoVroum du mois" :value="formatRevenue(stats.revenue.month)">
         <template #icon>
           <DollarSign class="w-5 h-5" />
         </template>
@@ -207,23 +207,24 @@
         <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
           <DollarSign class="w-4 h-4" />
         </span>
-        Revenus & Performance
+        Commission DodoVroum & volume des réservations
       </h2>
+      <p class="text-xs text-slate-500 -mt-3 mb-4">Comptés dès la confirmation du propriétaire : commission = 10 %, volume = 100 % du prix.</p>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <div class="bg-slate-50/80 rounded-xl p-3.5">
-          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Aujourd'hui</p>
+          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Commission aujourd'hui</p>
           <p class="text-lg font-bold text-slate-900 tracking-tight leading-tight">{{ formatPrice(stats.revenue.today) }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA</p>
+          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA · volume {{ formatPrice(stats.revenue.volumeToday ?? 0) }}</p>
         </div>
         <div class="bg-emerald-50/60 rounded-xl p-3.5">
-          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Ce mois</p>
+          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Commission ce mois</p>
           <p class="text-lg font-bold text-emerald-600 tracking-tight leading-tight">{{ formatPrice(stats.revenue.month) }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA</p>
+          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA · volume {{ formatPrice(stats.revenue.volumeMonth ?? 0) }}</p>
         </div>
         <div class="bg-blue-50/60 rounded-xl p-3.5">
-          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cumulé</p>
+          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Commission cumulée</p>
           <p class="text-lg font-bold text-blue-600 tracking-tight leading-tight">{{ formatPrice(stats.revenue.total) }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA</p>
+          <p class="text-[10px] text-slate-400 mt-0.5 font-medium">CFA · volume {{ formatPrice(stats.revenue.volumeTotal ?? 0) }}</p>
         </div>
         <div class="bg-emerald-50/60 rounded-xl p-3.5">
           <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Payées</p>
@@ -365,6 +366,9 @@ const props = defineProps<{
       today: number;
       month: number;
       total: number;
+      volumeToday?: number;
+      volumeMonth?: number;
+      volumeTotal?: number;
       paidBookings: number;
       unpaidBookings: number;
     };

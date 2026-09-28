@@ -57,7 +57,7 @@
         <div class="flex items-center justify-between mb-2">
           <DollarSign class="w-5 h-5 text-emerald-500" />
         </div>
-        <p class="text-sm text-slate-500 mb-1">Revenus du mois</p>
+        <p class="text-sm text-slate-500 mb-1">Revenus réalisés du mois</p>
         <p
           class="text-xl font-semibold text-emerald-600 leading-tight break-words"
           :title="`${formatPrice(stats?.monthRevenue || 0)} CFA`"

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Concerns\EvaluatesBookingRevenueEligibility;
 use App\Http\Controllers\Controller;
 use App\Services\DodoVroumApiService;
+use App\Support\BookingFinance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminRevenueController extends Controller
 {
-    use EvaluatesBookingRevenueEligibility;
 
     public function __construct(
         protected DodoVroumApiService $apiService
@@ -134,33 +133,31 @@ class AdminRevenueController extends Controller
         $eligibleCount = 0;
 
         foreach ($bookings as $booking) {
-            if (! is_array($booking) || ! $this->isEligibleForRevenue($booking)) {
+            // Commission DodoVroum : réservations confirmées par le propriétaire.
+            if (! is_array($booking) || ! BookingFinance::isPlatformRealized($booking)) {
                 continue;
             }
 
             $eligibleCount++;
 
-            $totalPrice = max(0.0, (float) ($booking['totalPrice'] ?? $booking['total_price'] ?? 0));
-            $commission = $totalPrice * 0.1;
+            // Commission DodoVroum (10 % du totalPrice), calculée par l'API.
+            $commission = BookingFinance::commission($booking);
             $totalRevenue += $commission;
 
-            $createdRaw = $booking['createdAt'] ?? $booking['created_at'] ?? null;
-            if ($createdRaw) {
-                try {
-                    $createdAt = Carbon::parse($createdRaw);
-                    $monthKey = $createdAt->format('Y-m');
-                    if (array_key_exists($monthKey, $chartBuckets)) {
-                        $chartBuckets[$monthKey] += $commission;
-                    }
-                    if ($createdAt->month === $currentMonth && $createdAt->year === $currentYear) {
-                        $revenueThisMonth += $commission;
-                        $bookingsThisMonth++;
-                    } elseif ($createdAt->format('Y-m') === $lastMonth->format('Y-m')) {
-                        $revenueLastMonth += $commission;
-                        $bookingsLastMonth++;
-                    }
-                } catch (\Throwable) {
-                    // createdAt invalide : on garde la commission dans le total mais pas la répartition temporelle
+            // Comptabilisée au mois de la confirmation du propriétaire.
+            $realizedAt = BookingFinance::platformRealizedAt($booking);
+            if ($realizedAt) {
+                $realizedAt = Carbon::instance($realizedAt)->utc();
+                $monthKey = $realizedAt->format('Y-m');
+                if (array_key_exists($monthKey, $chartBuckets)) {
+                    $chartBuckets[$monthKey] += $commission;
+                }
+                if ($realizedAt->month === $currentMonth && $realizedAt->year === $currentYear) {
+                    $revenueThisMonth += $commission;
+                    $bookingsThisMonth++;
+                } elseif ($monthKey === $lastMonth->format('Y-m')) {
+                    $revenueLastMonth += $commission;
+                    $bookingsLastMonth++;
                 }
             }
 
@@ -220,6 +217,9 @@ class AdminRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => $chartDataArray,
+            // Volume des réservations confirmées (100 % du totalPrice).
+            'volumeRealized' => BookingFinance::platformRealized($bookings)['bookingValue'],
+            'volumeRealizedThisMonth' => BookingFinance::platformRealized($bookings, BookingFinance::monthStart())['bookingValue'],
         ];
     }
 
@@ -241,6 +241,8 @@ class AdminRevenueController extends Controller
                 'properties' => 0,
             ],
             'chartData' => [],
+            'volumeRealized' => 0,
+            'volumeRealizedThisMonth' => 0,
         ];
     }
 }

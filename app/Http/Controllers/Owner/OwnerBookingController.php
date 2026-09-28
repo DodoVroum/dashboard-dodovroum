@@ -7,6 +7,7 @@ use App\Http\Controllers\Owner\Concerns\HasProprietaireId;
 use App\Services\DodoVroumApiService;
 use App\Services\DodoVroumApi\BookingService;
 use App\Services\DodoVroumApi\StatsService;
+use App\Support\BookingFinance;
 use App\Services\DodoVroumApi\ResidenceService;
 use App\Services\DodoVroumApi\VehicleService;
 use App\Services\BookingOwnerScopeService;
@@ -103,10 +104,9 @@ class OwnerBookingController extends Controller
                 }
             }
 
-            // Revenus = argent réellement encaissé, calculé par l'API sur les biens du
-            // propriétaire connecté (JWT) : paiements COMPLETED non marqués à rembourser,
-            // date d'encaissement (paidAt) pour le mois. Jamais le totalPrice des réservations.
-            ['totalRevenue' => $totalRevenue, 'monthRevenue' => $monthRevenue] = $this->collectedRevenue();
+            // Revenus propriétaire (90 % du totalPrice) calculés par l'API (GET /stats) :
+            // réalisés le jour de la remise des clés, en attente jusque-là.
+            $finance = $this->statsService->getOwnerFinance() ?? BookingFinance::fromSummary(null);
 
             // Mapper les réservations pour le frontend AVANT la pagination
             $mappedBookings = array_map(function ($booking) {
@@ -248,8 +248,9 @@ class OwnerBookingController extends Controller
                     'confirmedBookings' => $confirmedBookings,
                     'pendingBookings' => $pendingBookings,
                     'cancelledBookings' => $cancelledBookings,
-                    'totalRevenue' => $totalRevenue,
-                    'monthRevenue' => $monthRevenue,
+                    'totalRevenue' => $finance['owner']['realized'],
+                    'monthRevenue' => $finance['owner']['realizedMonth'],
+                    'pendingRevenue' => $finance['owner']['pending'],
                 ],
             ]);
         } catch (DodoVroumApiException $e) {
@@ -268,21 +269,10 @@ class OwnerBookingController extends Controller
                     'cancelledBookings' => 0,
                     'totalRevenue' => 0,
                     'monthRevenue' => 0,
+                    'pendingRevenue' => 0,
                 ],
             ]);
         }
-    }
-
-    /**
-     * Revenus encaissés du propriétaire connecté, fournis par GET /api/stats.
-     * En cas d'indisponibilité de l'API : 0 plutôt qu'un montant non encaissé.
-     *
-     * @return array{totalRevenue: float, monthRevenue: float}
-     */
-    private function collectedRevenue(): array
-    {
-        return $this->statsService->getOwnerRevenue()
-            ?? ['totalRevenue' => 0.0, 'monthRevenue' => 0.0];
     }
 
     /**
